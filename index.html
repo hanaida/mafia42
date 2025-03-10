@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>떡치기</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100vh;
+        }
+        #timer-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            background-color: red;
+            transition: none;
+        }
+        #game-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding-top: 50px;
+        }
+        #output {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .game-buttons {
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .game-button {
+            flex: 1;
+            min-width: 60px;
+            height: 60px;
+            font-size: 24px;
+            padding: 10px;
+        }
+        .correct {
+            color: lightgray;
+        }
+        #button-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        #start-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="timer-bar"></div>
+    <h1>떡치기</h1>
+
+    <div id="start-buttons">
+        <button onclick="startGame()">게임 시작</button>
+    </div>
+    
+    <div id="game-container">
+        <p id="output">랭킹 불러오는 중...</p>
+        <div id="button-container" class="game-buttons"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+        import { getFirestore, setDoc, getDoc, doc, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC1RCO59Qr1ogsZ1GNwxY9O2KGgMaFMyUM",
+            authDomain: "mafia-5c957.firebaseapp.com",
+            databaseURL: "https://mafia-5c957-default-rtdb.firebaseio.com",
+            projectId: "mafia-5c957",
+            storageBucket: "mafia-5c957.firebasestorage.app",
+            messagingSenderId: "979859367108",
+            appId: "1:979859367108:web:6f94ed2e25ca82d762d591"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let gameActive = false;
+        let round = 0;
+        let currentAnswer = "";
+        let inputSequence = "";
+        let colorsPig = ["1", "2", "3"];
+        let timer;
+        let nickname = localStorage.getItem("nickname");
+
+        function promptNickname() {
+            if (!nickname) {
+                nickname = prompt("닉네임을 입력하세요:");
+                if (!nickname) {
+                    alert("닉네임을 입력해야 합니다.");
+                    return false;
+                }
+                localStorage.setItem("nickname", nickname);
+            }
+            return true;
+        }
+
+        let rankingCache = "랭킹 불러오는 중..."; // 랭킹을 임시로 저장하는 변수
+
+async function loadRanking() {
+    const rankingRef = collection(db, "game_results");
+    const rankingQuery = query(rankingRef, orderBy("round", "desc"), limit(5));
+    const rankingSnapshot = await getDocs(rankingQuery);
+
+    rankingCache = rankingSnapshot.empty 
+        ? "아직 랭킹 정보가 없습니다."
+        : Array.from(rankingSnapshot.docs, (doc, index) => 
+            `${index + 1}위: ${doc.data().nickname} - ${doc.data().round} round`
+        ).join("<br>");
+
+    // 게임이 진행 중이 아닐 때만 랭킹을 표시
+    if (!gameActive) {
+        document.getElementById("output").innerHTML = rankingCache;
+    }
+}
+
+        function startGame() {
+            if (!promptNickname()) return;
+            if (gameActive) {
+                alert("이미 게임이 진행 중입니다.");
+                return;
+            }
+
+            gameActive = true;
+            round = 0;
+            inputSequence = "";
+            document.getElementById("start-buttons").style.display = "none";
+            generateQuestion();
+        }
+
+        function getPatternLength() {
+            return 6 + Math.floor(round / 5) * 2;
+        }
+
+        function generateQuestion() {
+            clearTimeout(timer);
+            resetTimerBar();
+            let length = getPatternLength();
+            currentAnswer = Array.from({ length: length }, (_, i) => (i % 2 === 0 ? colorsPig[Math.floor(Math.random() * colorsPig.length)] : "0")).join("");
+
+            let formattedAnswer = currentAnswer.split('').map(num => `<span class="pattern" data-value="${num}">${num}</span>`).join('');
+            document.getElementById("output").innerHTML = formattedAnswer;
+            inputSequence = "";
+            renderButtons();
+            startTimer();
+        }
+
+        function renderButtons() {
+    let container = document.getElementById("button-container");
+    container.innerHTML = "";
+
+    let buttonMap = {};
+
+    // 버튼 컨테이너 스타일 설정
+    container.style.display = "flex";
+    container.style.flexDirection = "column";
+    container.style.alignItems = "center";
+
+    // 3 버튼을 포함하는 그룹
+    let btnGroup = document.createElement("div");
+    btnGroup.style.display = "flex";
+    btnGroup.style.flexDirection = "column";
+    btnGroup.style.alignItems = "center";
+
+    let btn3 = document.createElement("button");
+    btn3.innerText = "3";
+    btn3.classList.add("game-button");
+    addImmediateInputEvent(btn3, "3");
+    buttonMap["3"] = btn3;
+
+    btnGroup.appendChild(btn3);
+
+    // 1과 2 버튼을 포함하는 그룹
+    let rowNumbers = document.createElement("div");
+    rowNumbers.style.display = "flex";
+    rowNumbers.style.justifyContent = "space-between";
+    rowNumbers.style.width = "120px"; // 1과 2 버튼 간격 조정
+
+    let btn1 = document.createElement("button");
+    btn1.innerText = "1";
+    btn1.classList.add("game-button");
+    addImmediateInputEvent(btn1, "1");
+    buttonMap["1"] = btn1;
+
+    let btn2 = document.createElement("button");
+    btn2.innerText = "2";
+    btn2.classList.add("game-button");
+    addImmediateInputEvent(btn2, "2");
+    buttonMap["2"] = btn2;
+
+    rowNumbers.appendChild(btn1);
+    rowNumbers.appendChild(btn2);
+    btnGroup.appendChild(rowNumbers);
+
+    // 하단 0 버튼을 포함하는 그룹
+    let rowBottom = document.createElement("div");
+    rowBottom.style.display = "flex";
+    rowBottom.style.alignItems = "center";
+    rowBottom.style.justifyContent = "space-between";
+    rowBottom.style.width = "250px"; // 1,2와 0 사이 간격을 넓힘
+
+    rowBottom.appendChild(btnGroup); // 3, 1, 2 버튼 그룹 추가
+
+    let spacer = document.createElement("div");
+    spacer.style.width = "80px"; // 1,2와 0 사이 간격 조절
+    rowBottom.appendChild(spacer);
+
+    let btn0 = document.createElement("button");
+    btn0.innerText = "0";
+    btn0.classList.add("game-button");
+    addImmediateInputEvent(btn0, "0");
+    buttonMap["0"] = btn0;
+
+    rowBottom.appendChild(btn0);
+    
+    container.appendChild(rowBottom);
+}
+
+/**
+ * 버튼을 누르자마자 입력되도록 이벤트 추가하는 함수
+ * @param {HTMLElement} button 버튼 요소
+ * @param {string} value 입력할 숫자
+ */
+function addImmediateInputEvent(button, value) {
+    button.onmousedown = () => handleInput(value);
+    button.ontouchstart = (e) => {
+        e.preventDefault(); // 모바일에서 터치 중복 실행 방지
+        handleInput(value);
+    };
+}
+
+        function handleInput(input) {
+    if (!gameActive) return;
+    inputSequence += input;
+
+    let patternElements = document.querySelectorAll(".pattern");
+
+    // 입력한 숫자의 색을 연하게 변경
+    if (inputSequence.length <= patternElements.length) {
+        patternElements[inputSequence.length - 1].classList.add("correct");
+    }
+
+    if (inputSequence === currentAnswer) {
+        clearTimeout(timer);
+        round++;
+        document.getElementById("output").innerText = `통과! Round: ${round}`;
+        setTimeout(generateQuestion, 1000);
+    } else if (!currentAnswer.startsWith(inputSequence)) {
+        gameOver();
+    }
+}
+
+        function startTimer() {
+            let timerBar = document.getElementById("timer-bar");
+            clearTimeout(timer);
+            resetTimerBar();
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    timerBar.style.transition = "width 5s linear";
+                    timerBar.style.width = "0%";
+                });
+            });
+
+            timer = setTimeout(gameOver, 5000);
+        }
+
+        function resetTimerBar() {
+            let timerBar = document.getElementById("timer-bar");
+            timerBar.style.transition = "none";
+            timerBar.style.width = "100%";
+        }
+
+        async function gameOver() {
+    alert("실패! 게임 오버");
+    gameActive = false;
+    document.getElementById("output").innerHTML = rankingCache; // 게임이 끝난 후에만 랭킹 표시
+    document.getElementById("start-buttons").style.display = "block";
+    resetTimerBar();
+
+    const userRef = doc(db, "game_results", nickname);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists() || round > userSnap.data().round) {
+        await setDoc(userRef, { nickname, round });
+    }
+
+    loadRanking(); // 랭킹을 최신 상태로 업데이트
+}
+
+        window.startGame = startGame;
+
+        // 페이지 로드 시 랭킹 불러오기
+        loadRanking();
+    </script>
+</body>
+</html>

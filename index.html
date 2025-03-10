@@ -303,8 +303,33 @@ function addImmediateInputEvent(button, value) {
     const userRef = doc(db, "game_results", nickname);
     const userSnap = await getDoc(userRef);
 
-    if (!userSnap.exists() || round > userSnap.data().round) {
-        await setDoc(userRef, { nickname, round });
+    if (userSnap.exists()) {
+        // 기존 데이터가 존재하는 경우
+        const userData = userSnap.data();
+        const currentPlayCount = userData.play_count || 0;
+        const updatedPlayCount = currentPlayCount + 1;
+
+        // 기존 데이터와 비교하여 더 높은 round 수를 저장
+        if (round > userData.round) {
+            await setDoc(userRef, { 
+                nickname, 
+                round, 
+                play_count: updatedPlayCount 
+            });
+        } else {
+            await setDoc(userRef, { 
+                nickname, 
+                round: userData.round, 
+                play_count: updatedPlayCount 
+            });
+        }
+    } else {
+        // 데이터가 없는 경우 새로 생성
+        await setDoc(userRef, { 
+            nickname, 
+            round, 
+            play_count: 1 
+        });
     }
 
     loadRanking(); // 랭킹을 최신 상태로 업데이트

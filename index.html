@@ -154,14 +154,22 @@ async function loadRanking() {
             return 6 + Math.floor(round / 5) * 2;
         }
 
+        function formatPattern(pattern) {
+    return pattern
+        .split('')
+        .map((num) => `<span class="pattern">${num}</span>`)
+        .reduce((acc, curr, index) => acc + curr + ((index + 1) % 6 === 0 ? "<br>" : " "), "");
+} 
+
         function generateQuestion() {
             clearTimeout(timer);
             resetTimerBar();
             let length = getPatternLength();
             currentAnswer = Array.from({ length: length }, (_, i) => (i % 2 === 0 ? colorsPig[Math.floor(Math.random() * colorsPig.length)] : "0")).join("");
 
-            let formattedAnswer = currentAnswer.split('').map(num => `<span class="pattern" data-value="${num}">${num}</span>`).join('');
-            document.getElementById("output").innerHTML = formattedAnswer;
+            let formattedAnswer = formatPattern(currentAnswer);
+
+document.getElementById("output").innerHTML = formattedAnswer;
             inputSequence = "";
             renderButtons();
             startTimer();
@@ -252,25 +260,24 @@ function addImmediateInputEvent(button, value) {
 }
 
         function handleInput(input) {
-    if (!gameActive) return;
-    inputSequence += input;
+            if (!gameActive) return;
+            inputSequence += input;
 
-    let patternElements = document.querySelectorAll(".pattern");
+            let patternElements = document.querySelectorAll(".pattern");
 
-    // 입력한 숫자의 색을 연하게 변경
-    if (inputSequence.length <= patternElements.length) {
-        patternElements[inputSequence.length - 1].classList.add("correct");
-    }
+            if (inputSequence.length <= patternElements.length) {
+                patternElements[inputSequence.length - 1].classList.add("correct");
+            }
 
-    if (inputSequence === currentAnswer) {
-        clearTimeout(timer);
-        round++;
-        document.getElementById("output").innerText = `통과! Round: ${round}`;
-        setTimeout(generateQuestion, 1000);
-    } else if (!currentAnswer.startsWith(inputSequence)) {
-        gameOver();
-    }
-}
+            if (inputSequence === currentAnswer) {
+                clearTimeout(timer);
+                round++;
+                document.getElementById("output").innerText = `통과! Round: ${round}`;
+                setTimeout(generateQuestion, 1000);
+            } else if (!currentAnswer.startsWith(inputSequence)) {
+                gameOver();
+            }
+        }
 
         function startTimer() {
             let timerBar = document.getElementById("timer-bar");
@@ -342,3 +349,4 @@ function addImmediateInputEvent(button, value) {
     </script>
 </body>
 </html>
+ 

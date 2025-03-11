@@ -235,6 +235,49 @@ function playSound(soundKey) {
 
 
 
+async function loadUserInfo() {
+    if (!nickname) {
+        document.getElementById("user-info").innerText = "닉네임을 설정해주세요.";
+        return;
+    }
+
+    const userRef = doc(db, "game_results", nickname);
+    const userSnap = await getDoc(userRef);
+    
+    let userRound = 0;
+    let totalPlayers = 0;
+    let userRank = "데이터 없음";
+
+    // 유저 최고 라운드 가져오기
+    if (userSnap.exists()) {
+        userRound = userSnap.data().round;
+    }
+
+    // 전체 유저 랭킹 가져오기
+    const rankingRef = collection(db, "game_results");
+    const rankingQuery = query(rankingRef, orderBy("round", "desc"));
+    const rankingSnapshot = await getDocs(rankingQuery);
+
+    totalPlayers = rankingSnapshot.size;
+
+    let rank = 1;
+    for (const doc of rankingSnapshot.docs) {
+        if (doc.id === nickname) {
+            userRank = rank;
+            break;
+        }
+        rank++;
+    }
+
+    document.getElementById("user-info").innerHTML = `
+        <strong>닉네임:</strong> ${nickname} <br>
+        <strong>최고 라운드:</strong> ${userRound} <br>
+        <strong>랭킹:</strong> 전체 ${totalPlayers}명 중 <span style="color: blue;">${userRank}등</span>
+    `;
+}
+
+
+
 
 
 async function loadUserRecord() {
@@ -281,11 +324,12 @@ function startGame() {
     
    // 사용자 기록 업데이트
     loadUserRecord();
+    loadUserInfo();
 }
 
 // 페이지 로드 시 랭킹 & 사용자 기록 불러오기
 loadRanking();
-loadUserRecord();
+loadUserInfo();
 
         function getPatternLength() {
             return 6 + Math.floor(round / 5) * 2;

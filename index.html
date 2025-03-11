@@ -138,7 +138,8 @@
     <h1>떡치기</h1>
 
     <div id="start-buttons">
-        <button onclick="startGame()">게임 시작</button>
+    <p id="user-info">사용자 정보를 불러오는 중...</p>
+    <button onclick="startGame()">게임 시작</button>
     </div>
     
     <div id="game-container">
@@ -235,6 +236,27 @@ function playSound(soundKey) {
 
 
 
+
+async function loadUserRecord() {
+    if (!nickname) return; // 닉네임이 없으면 실행 안 함
+
+    const userRef = doc(db, "game_results", nickname);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+        const userData = userSnap.data();
+        document.getElementById("user-info").innerHTML = 
+            `닉네임: <b>${nickname}</b><br>최고 라운드: <b>${userData.round}</b>`;
+    } else {
+        document.getElementById("user-info").innerHTML = 
+            `닉네임: <b>${nickname}</b><br>최고 라운드: <b>기록 없음</b>`;
+    }
+}
+
+
+
+
+        
         
         let backgroundMusic = new Audio("game-music.mp3"); // 오디오 파일 로드
 backgroundMusic.loop = true; // 반복 재생 설정
@@ -256,7 +278,14 @@ function startGame() {
     backgroundMusic.play().catch(error => {
         console.log("자동 재생이 차단됨. 유저 입력 후 재생 필요", error);
     });
+    
+   // 사용자 기록 업데이트
+    loadUserRecord();
 }
+
+// 페이지 로드 시 랭킹 & 사용자 기록 불러오기
+loadRanking();
+loadUserRecord();
 
         function getPatternLength() {
             return 6 + Math.floor(round / 5) * 2;

@@ -131,7 +131,7 @@
         }
         #button-container {
             position: fixed;
-            bottom: 20px;
+            bottom: 70px; /*전체 버튼 위치 조정*/
             left: 50%;
             transform: translateX(-50%);
         }
@@ -518,7 +518,7 @@ function renderButtons() {
     btn0Wrapper.style.display = "flex";
     btn0Wrapper.style.justifyContent = "center";
     btn0Wrapper.style.alignItems = "center";
-    btn0Wrapper.style.marginBottom = "10px"; // 보라색 버튼
+    btn0Wrapper.style.marginBottom = "-70px"; // 보라색 버튼
 
     let btn0 = document.createElement("button");
     btn0.innerText = "0";

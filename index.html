@@ -381,6 +381,17 @@ function addImmediateInputEvent(button, value) {
     document.getElementById("output").innerHTML = rankingCache; // 게임이 끝난 후에만 랭킹 표시
     document.getElementById("start-buttons").style.display = "block";
     resetTimerBar();
+  
+
+
+
+
+ // 배경 음악 정지
+    backgroundMusic.pause();
+    backgroundMusic.currentTime = 0; // 처음으로 되감기
+
+
+
 
     const userRef = doc(db, "game_results", nickname);
     const userSnap = await getDoc(userRef);

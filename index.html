@@ -536,12 +536,19 @@ async function gameOver() {
     gameActive = false;
     clearTimeout(timer);
 
+    // 배경 음악 중지
+    backgroundMusic.pause();
+    backgroundMusic.currentTime = 0;
+
+    // 게임 오버 효과음 재생 (한 번만)
+    let gameOverSound = new Audio("game-over.mp3");
+    gameOverSound.play().catch(error => console.log("게임 오버 효과음 재생 오류:", error));
+
     alert("게임 오버");
     document.getElementById("output").innerHTML = rankingCache;
     document.getElementById("start-buttons").style.display = "block";
     resetTimerBar();
 
-    // 평균값 계산
     let avgFirstReaction = firstReactionTimes.length > 0 ? 
         Math.floor(firstReactionTimes.reduce((a, b) => a + b, 0) / firstReactionTimes.length) : 0;
     let avgReaction = reactionTimes.length > 0 ? 
@@ -560,12 +567,11 @@ async function gameOver() {
     const gameRecord = {
         nickname,
         round,
-        play_time: new Date().toISOString(), // 플레이 날짜 및 시간 저장
+        play_time: new Date().toISOString(),
         first_reaction_avg: avgFirstReaction,
         reaction_avg: avgReaction
     };
 
-    // `game_results` 업데이트
     if (userSnap.exists()) {
         const userData = userSnap.data();
         const updatedPlayCount = (userData.play_count || 0) + 1;
@@ -579,14 +585,11 @@ async function gameOver() {
         await setDoc(userRef, { nickname, round, play_count: 1 });
     }
 
-    // **새로운 `game_history` 컬렉션에 플레이 기록 추가**
     const historyRef = collection(db, "game_history");
     await setDoc(doc(historyRef, `${nickname}_${Date.now()}`), gameRecord);
 
-    // 최신 정보 갱신 (랭킹 및 내 정보 업데이트)
-    await loadUserInfo();  // 내 정보 최신화
+    await loadUserInfo();
 }
-
         window.startGame = startGame;
 
         // 페이지 로드 시 랭킹 불러오기

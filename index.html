@@ -78,26 +78,33 @@
 .pattern::after {
     content: "";
     position: absolute;
-    bottom: 0px; /* 숫자 자리에 배치 */
+    bottom: 0px;
     left: 50%;
     transform: translateX(-50%);
-    width: 34px;  /* 작은 원 크기 */
+    width: 34px;
     height: 34px;
-    border-radius: 50%; /* 원형 */
+    border-radius: 50%;
+    background-size: cover; /* 이미지 크기 조절 */
 }
 
-/* 숫자별 원 색상 지정 */
+/* 숫자별 이미지 적용 */
 .pattern[data-value="1"]::after {
-    background-color: yellow;
+    background-image: url('yellow.png'); /* 숫자 1에 해당하는 이미지 */
 }
 .pattern[data-value="2"]::after {
-    background-color: orange;
+    background-image: url('orange.png'); /* 숫자 2에 해당하는 이미지 */
 }
 .pattern[data-value="3"]::after {
-    background-color: red;
+    background-image: url('red.png'); /* 숫자 3에 해당하는 이미지 */
 }
 .pattern[data-value="0"]::after {
-    background-color: purple;
+    background-image: url('purple.png'); /* 숫자 0에 해당하는 이미지 */
+}
+
+/* 정답 입력 시 밝기 변경 효과 */
+.correct::after {
+    filter: brightness(120%);
+    opacity: 0.8;
 }
 /* 기존 스타일에 추가 */
 .correct::after {

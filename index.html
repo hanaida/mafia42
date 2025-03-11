@@ -657,9 +657,7 @@ async function gameOver() {
         await setDoc(userRef, { nickname, round, play_count: 1 });
     }
 
-    const historyRef = collection(db, "game_history");
-    await setDoc(doc(historyRef, `${nickname}_${Date.now()}`), gameRecord);
-
+    
     await loadUserInfo();
     await loadPlayCount(); // 플레이 횟수 업데이트
 }

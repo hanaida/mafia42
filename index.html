@@ -91,30 +91,36 @@
 }
 
         .game-button {
-    width: 80px; /* 버튼 크기 */
+    position: relative;
+    width: 80px;
     height: 80px;
     border: none;
-    border-radius: 50%; /* 원형 버튼 */
-    background-size: cover; /* 이미지를 버튼 크기에 맞게 */
+    border-radius: 50%;
+    background-size: cover;
     background-position: center;
-    cursor: pointer;
+    font-size: 24px;
+    font-weight: bold;
+    color: white; /* 텍스트 색상을 대비되게 */
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-/* 각 버튼마다 다른 이미지 적용 */
 .button-1 {
-    background-image: url('yellow.png);
+    background-image: url('이미지1.png');
 }
 
 .button-2 {
-    background-image: url('orange.png');
+    background-image: url('이미지2.png');
 }
 
 .button-3 {
-    background-image: url('red.png');
+    background-image: url('이미지3.png');
 }
 
 .button-0 {
-    background-image: url('purple.png');
+    background-image: url('이미지0.png');
 }
         .correct {
             color: lightgray;

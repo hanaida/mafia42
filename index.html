@@ -42,7 +42,29 @@
             gap: 10px;
             margin-bottom: 20px;
         }
-        
+        .button-1 {
+    background-color: yellow;
+    color: black;
+    border: none;
+}
+
+.button-2 {
+    background-color: orange;
+    color: white;
+    border: none;
+}
+
+.button-3 {
+    background-color: red;
+    color: white;
+    border: none;
+}
+
+.button-0 {
+    background-color: purple;
+    color: white;
+    border: none;
+}
 .pattern {
     position: relative;
     display: inline-block;
@@ -56,33 +78,26 @@
 .pattern::after {
     content: "";
     position: absolute;
-    bottom: 0px;
+    bottom: 0px; /* 숫자 자리에 배치 */
     left: 50%;
     transform: translateX(-50%);
-    width: 34px;
+    width: 34px;  /* 작은 원 크기 */
     height: 34px;
-    border-radius: 50%;
-    background-size: cover; /* 이미지 크기 조절 */
+    border-radius: 50%; /* 원형 */
 }
 
-/* 숫자별 이미지 적용 */
+/* 숫자별 원 색상 지정 */
 .pattern[data-value="1"]::after {
-    background-image: url('yellow.png'); /* 숫자 1에 해당하는 이미지 */
+    background-color: yellow;
 }
 .pattern[data-value="2"]::after {
-    background-image: url('orange.png'); /* 숫자 2에 해당하는 이미지 */
+    background-color: orange;
 }
 .pattern[data-value="3"]::after {
-    background-image: url('red.png'); /* 숫자 3에 해당하는 이미지 */
+    background-color: red;
 }
 .pattern[data-value="0"]::after {
-    background-image: url('purple.png'); /* 숫자 0에 해당하는 이미지 */
-}
-
-/* 정답 입력 시 밝기 변경 효과 */
-.correct::after {
-    filter: brightness(120%);
-    opacity: 0.8;
+    background-color: purple;
 }
 /* 기존 스타일에 추가 */
 .correct::after {
@@ -91,36 +106,14 @@
 }
 
         .game-button {
-    position: relative;
-    width: 80px;
-    height: 80px;
-    border: none;
-    border-radius: 50%;
-    background-size: cover;
-    background-position: center;
-    font-size: 24px;
-    font-weight: bold;
-    color: white; /* 텍스트 색상을 대비되게 */
-    text-align: center;
+    width: 60px; /* 기존 60px → 80px */
+    height: 60px; /* 기존 60px → 80px */
+    font-size: 24px; /* 기존 24px → 28px */
+    padding: 10px; /* 기존 10px → 15px */
+    border-radius: 50%; /* 원형 유지 */
     display: flex;
     justify-content: center;
     align-items: center;
-}
-
-.button-1 {
-    background-image: url('이미지1.png');
-}
-
-.button-2 {
-    background-image: url('이미지2.png');
-}
-
-.button-3 {
-    background-image: url('이미지3.png');
-}
-
-.button-0 {
-    background-image: url('이미지0.png');
 }
         .correct {
             color: lightgray;

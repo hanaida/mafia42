@@ -42,29 +42,7 @@
             gap: 10px;
             margin-bottom: 20px;
         }
-        .button-1 {
-    background-color: yellow;
-    color: black;
-    border: none;
-}
-
-.button-2 {
-    background-color: orange;
-    color: white;
-    border: none;
-}
-
-.button-3 {
-    background-color: red;
-    color: white;
-    border: none;
-}
-
-.button-0 {
-    background-color: purple;
-    color: white;
-    border: none;
-}
+        
 .pattern {
     position: relative;
     display: inline-block;
@@ -113,14 +91,30 @@
 }
 
         .game-button {
-    width: 60px; /* 기존 60px → 80px */
-    height: 60px; /* 기존 60px → 80px */
-    font-size: 24px; /* 기존 24px → 28px */
-    padding: 10px; /* 기존 10px → 15px */
-    border-radius: 50%; /* 원형 유지 */
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    width: 80px; /* 버튼 크기 */
+    height: 80px;
+    border: none;
+    border-radius: 50%; /* 원형 버튼 */
+    background-size: cover; /* 이미지를 버튼 크기에 맞게 */
+    background-position: center;
+    cursor: pointer;
+}
+
+/* 각 버튼마다 다른 이미지 적용 */
+.button-1 {
+    background-image: url('yellow.png);
+}
+
+.button-2 {
+    background-image: url('orange.png');
+}
+
+.button-3 {
+    background-image: url('red.png');
+}
+
+.button-0 {
+    background-image: url('purple.png');
 }
         .correct {
             color: lightgray;

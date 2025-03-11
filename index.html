@@ -544,7 +544,6 @@ async function gameOver() {
     let gameOverSound = new Audio("game-over.mp3");
     gameOverSound.play().catch(error => console.log("게임 오버 효과음 재생 오류:", error));
 
-    alert("게임 오버");
     document.getElementById("output").innerHTML = rankingCache;
     document.getElementById("start-buttons").style.display = "block";
     resetTimerBar();

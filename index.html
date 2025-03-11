@@ -194,7 +194,7 @@ async function loadRanking() {
     rankingCache = rankingSnapshot.empty 
         ? "아직 랭킹 정보가 없습니다."
         : `<span style="color: red; font-weight: bold; font-size: 35px;">명예의 전당</span><br>
-           <span style="color: black; font-size: 12px;">랭킹 보상 - 1위 : 깜주 2-3위 : 깜엽 4-5위 : 주엽</span><br><br>` + 
+           <span style="color: black; font-size: 12px;">랭킹 보상(일요일 지급) - 1위 : 깜주 2-3위 : 깜엽 4-5위 : 주엽</span><br><br>` + 
         Array.from(rankingSnapshot.docs, (doc, index) => 
             `${index + 1}위: ${doc.data().nickname} - ${doc.data().round} round`
         ).join("<br>");

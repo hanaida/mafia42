@@ -461,8 +461,10 @@ function addImmediateInputEvent(button, value) {
         /**
  * 버튼을 누를 때 반응속도 측정
  */
+let nextRoundPending = false; // 새로운 변수 추가
+
 function handleInput(input) {
-    if (!gameActive) return;
+    if (!gameActive || nextRoundPending) return; // '통과!' 상태일 때 입력 차단
 
     let currentTime = Date.now();
     if (!lastInputTime) {
@@ -477,7 +479,7 @@ function handleInput(input) {
     let patternElements = document.querySelectorAll(".pattern");
     if (inputSequence.length <= patternElements.length) {
         let targetElement = patternElements[inputSequence.length - 1];
-        targetElement.classList.add("correct"); // 색상 어둡게 변경
+        targetElement.classList.add("correct");
     }
 
     if (inputSequence === currentAnswer) {
@@ -493,7 +495,12 @@ function handleInput(input) {
             첫 반응속도: ${firstReaction} ms<br>
             평균속도: ${avgReaction} ms`;
 
-        setTimeout(generateQuestion, 1000);
+        nextRoundPending = true; // 통과 메시지 표시 중 입력 차단
+
+        setTimeout(() => {
+            nextRoundPending = false; // 새로운 라운드 시작 전 입력 허용
+            generateQuestion();
+        }, 1000);
     } else if (!currentAnswer.startsWith(inputSequence)) {
         gameOver();
     }
@@ -524,8 +531,12 @@ function handleInput(input) {
  * 게임 종료 후 반응속도 평균 계산 및 리포트 표시
  */
 async function gameOver() {
-    alert("실패! 게임 오버");
+    if (!gameActive) return;
+
     gameActive = false;
+    clearTimeout(timer);
+
+    alert("게임 오버");
     document.getElementById("output").innerHTML = rankingCache;
     document.getElementById("start-buttons").style.display = "block";
     resetTimerBar();
@@ -536,45 +547,41 @@ async function gameOver() {
     let avgReaction = reactionTimes.length > 0 ? 
         Math.floor(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length) : 0;
 
-    // 게임 리포트 표시
     document.getElementById("output").innerHTML = `
-        게임 종료!<br><br>
-        <strong>게임 리포트</strong><br>
+        게임 리포트<br><br>
         <strong>도달 라운드:</strong> ${round}<br>
-        <strong>첫 반응속도 평균:</strong> ${avgFirstReaction} ms<br>
+        <strong>첫 반응속도:</strong> ${avgFirstReaction} ms<br>
         <strong>평균속도:</strong> ${avgReaction} ms
     `;
 
-    // Firebase 업데이트 (기존 코드 유지)
     const userRef = doc(db, "game_results", nickname);
     const userSnap = await getDoc(userRef);
 
+    const gameRecord = {
+        nickname,
+        round,
+        play_time: new Date().toISOString(), // 플레이 날짜 및 시간 저장
+        first_reaction_avg: avgFirstReaction,
+        reaction_avg: avgReaction
+    };
+
+    // `game_results` 업데이트
     if (userSnap.exists()) {
         const userData = userSnap.data();
         const updatedPlayCount = (userData.play_count || 0) + 1;
 
         if (round > userData.round) {
-            await setDoc(userRef, { 
-                nickname, 
-                round, 
-                play_count: updatedPlayCount 
-            });
+            await setDoc(userRef, { ...userData, round, play_count: updatedPlayCount });
         } else {
-            await setDoc(userRef, { 
-                nickname, 
-                round: userData.round, 
-                play_count: updatedPlayCount 
-            });
+            await setDoc(userRef, { ...userData, play_count: updatedPlayCount });
         }
     } else {
-        await setDoc(userRef, { 
-            nickname, 
-            round, 
-            play_count: 1 
-        });
+        await setDoc(userRef, { nickname, round, play_count: 1 });
     }
 
-    loadRanking();
+    // **새로운 `game_history` 컬렉션에 플레이 기록 추가**
+    const historyRef = collection(db, "game_history");
+    await setDoc(doc(historyRef, `${nickname}_${Date.now()}`), gameRecord);
 }
 
         window.startGame = startGame;
@@ -588,4 +595,3 @@ async function gameOver() {
 </footer>
 </html>
  
-

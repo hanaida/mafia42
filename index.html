@@ -582,6 +582,9 @@ async function gameOver() {
     // **새로운 `game_history` 컬렉션에 플레이 기록 추가**
     const historyRef = collection(db, "game_history");
     await setDoc(doc(historyRef, `${nickname}_${Date.now()}`), gameRecord);
+
+    // 최신 정보 갱신 (랭킹 및 내 정보 업데이트)
+    await loadUserInfo();  // 내 정보 최신화
 }
 
         window.startGame = startGame;

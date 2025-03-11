@@ -40,7 +40,7 @@
             flex-wrap: nowrap;
             justify-content: center;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 35px;
         }
         .button-1 {
     background-color: yellow;
@@ -129,8 +129,15 @@
             flex-direction: column;
             align-items: center;
             gap: 10px;
-            margin-top: 20px;
+            margin-top: 0px;
         }
+#play-count {
+    margin-bottom: 0px; /* 기본 값보다 줄여서 간격 조정 */
+}
+
+#output {
+    margin-top: 0px; /* 기본 값보다 줄여서 간격 조정 */
+}
     </style>
 </head>
 <body>
@@ -140,7 +147,8 @@
     <div id="start-buttons">
     <p id="user-info">사용자 정보를 불러오는 중...</p>
     <button onclick="startGame()">게임 시작</button>
-    </div>
+    <p id="play-count">플레이 기록 불러오는 중...</p> <!-- 추가된 문구 -->
+</div>
     
     <div id="game-container">
         <p id="output">랭킹 불러오는 중...</p>
@@ -183,6 +191,36 @@
             }
             return true;
         }
+
+
+async function loadPlayCount() {
+    const historyRef = collection(db, "game_history");
+    const now = new Date();
+    const past24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    // 24시간 내 플레이 횟수 조회
+    const lastDayQuery = query(historyRef, orderBy("play_time", "desc"));
+    const lastDaySnapshot = await getDocs(lastDayQuery);
+
+    let last24HoursCount = 0;
+    let totalCount = lastDaySnapshot.size;
+
+    lastDaySnapshot.forEach((doc) => {
+        const playTime = new Date(doc.data().play_time);
+        if (playTime >= past24Hours) {
+            last24HoursCount++;
+        }
+    });
+
+    document.getElementById("play-count").innerHTML = 
+    `24시간 동안 <span style="color: red;">총 ${last24HoursCount}회</span> 플레이되었습니다.<br>
+    지금까지 <span style="color: red;">총 ${totalCount}회</span> 플레이되었습니다.`;
+}
+
+// 페이지 로드 시 플레이 횟수 정보 불러오기
+loadPlayCount();
+
+
 
         let rankingCache = "랭킹 불러오는 중..."; // 랭킹을 임시로 저장하는 변수
 
@@ -536,11 +574,9 @@ async function gameOver() {
     gameActive = false;
     clearTimeout(timer);
 
-    // 배경 음악 중지
     backgroundMusic.pause();
     backgroundMusic.currentTime = 0;
 
-    // 게임 오버 효과음 재생 (한 번만)
     let gameOverSound = new Audio("game-over.mp3");
     gameOverSound.play().catch(error => console.log("게임 오버 효과음 재생 오류:", error));
 
@@ -588,6 +624,7 @@ async function gameOver() {
     await setDoc(doc(historyRef, `${nickname}_${Date.now()}`), gameRecord);
 
     await loadUserInfo();
+    await loadPlayCount(); // 플레이 횟수 업데이트
 }
         window.startGame = startGame;
 

@@ -202,19 +202,27 @@ async function loadRanking() {
     }
 }
 
-        function startGame() {
-            if (!promptNickname()) return;
-            if (gameActive) {
-                alert("이미 게임이 진행 중입니다.");
-                return;
-            }
+        let backgroundMusic = new Audio("game-music.mp3"); // 오디오 파일 로드
+backgroundMusic.loop = true; // 반복 재생 설정
 
-            gameActive = true;
-            round = 0;
-            inputSequence = "";
-            document.getElementById("start-buttons").style.display = "none";
-            generateQuestion();
-        }
+function startGame() {
+    if (!promptNickname()) return;
+    if (gameActive) {
+        alert("이미 게임이 진행 중입니다.");
+        return;
+    }
+
+    gameActive = true;
+    round = 0;
+    inputSequence = "";
+    document.getElementById("start-buttons").style.display = "none";
+    generateQuestion();
+
+    // 게임이 시작될 때 음악 재생
+    backgroundMusic.play().catch(error => {
+        console.log("자동 재생이 차단됨. 유저 입력 후 재생 필요", error);
+    });
+}
 
         function getPatternLength() {
             return 6 + Math.floor(round / 5) * 2;

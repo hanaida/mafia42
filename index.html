@@ -202,6 +202,31 @@ async function loadRanking() {
     }
 }
 
+
+
+
+// 효과음 파일 경로 설정
+const soundEffects = {
+    "1": new Audio("sound0.mp3"),
+    "2": new Audio("sound0.mp3"),
+    "3": new Audio("sound0.mp3"),
+    "0": new Audio("sound0.mp3")
+};
+
+// 효과음 중첩 재생을 위해 새로운 오디오 객체를 생성하는 함수
+function playSound(soundKey) {
+    if (soundEffects[soundKey]) {
+        let sound = new Audio(soundEffects[soundKey].src); // 새로운 인스턴스 생성
+        sound.play();
+    }
+}
+
+// 버튼에 즉시 입력 및 효과음 재생 이벤트 추가
+
+
+
+
+        
         let backgroundMusic = new Audio("game-music.mp3"); // 오디오 파일 로드
 backgroundMusic.loop = true; // 반복 재생 설정
 
@@ -326,12 +351,17 @@ document.getElementById("output").innerHTML = formattedAnswer;
  * @param {string} value 입력할 숫자
  */
 function addImmediateInputEvent(button, value) {
-    button.onmousedown = () => handleInput(value);
+    button.onmousedown = () => {
+        handleInput(value);
+        playSound(value); // 버튼 클릭 시 효과음 재생
+    };
     button.ontouchstart = (e) => {
         e.preventDefault(); // 모바일에서 터치 중복 실행 방지
         handleInput(value);
+        playSound(value);
     };
 }
+
 
         function handleInput(input) {
     if (!gameActive) return;
@@ -381,17 +411,6 @@ function addImmediateInputEvent(button, value) {
     document.getElementById("output").innerHTML = rankingCache; // 게임이 끝난 후에만 랭킹 표시
     document.getElementById("start-buttons").style.display = "block";
     resetTimerBar();
-  
-
-
-
-
- // 배경 음악 정지
-    backgroundMusic.pause();
-    backgroundMusic.currentTime = 0; // 처음으로 되감기
-
-
-
 
     const userRef = doc(db, "game_results", nickname);
     const userSnap = await getDoc(userRef);

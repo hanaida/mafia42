@@ -42,13 +42,78 @@
             gap: 10px;
             margin-bottom: 20px;
         }
+        .button-1 {
+    background-color: yellow;
+    color: black;
+    border: none;
+}
+
+.button-2 {
+    background-color: orange;
+    color: white;
+    border: none;
+}
+
+.button-3 {
+    background-color: red;
+    color: white;
+    border: none;
+}
+
+.button-0 {
+    background-color: purple;
+    color: white;
+    border: none;
+}
+.pattern {
+    position: relative;
+    display: inline-block;
+    width: 26px; /* 기존 24px → 26px (좌우 간격 증가) */
+    text-align: center;
+    margin-right: 4px; /* 숫자 사이 간격 증가 */
+    margin-bottom: 6px; /* 기존보다 약간만 아래쪽 간격 증가 */
+}
+
+.pattern::after {
+    content: "";
+    position: absolute;
+    bottom: 0px; /* 숫자 자리에 배치 */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 34px;  /* 작은 원 크기 */
+    height: 34px;
+    border-radius: 50%; /* 원형 */
+}
+
+/* 숫자별 원 색상 지정 */
+.pattern[data-value="1"]::after {
+    background-color: orange;
+}
+.pattern[data-value="2"]::after {
+    background-color: yellow;
+}
+.pattern[data-value="3"]::after {
+    background-color: red;
+}
+.pattern[data-value="0"]::after {
+    background-color: purple;
+}
+/* 기존 스타일에 추가 */
+.correct::after {
+    filter: brightness(200%); /* 색상을 더 밝게 */
+    opacity: 0.6; /* 투명도를 살짝 낮춰서 연하게 */
+}
+
         .game-button {
-            flex: 1;
-            min-width: 60px;
-            height: 60px;
-            font-size: 24px;
-            padding: 10px;
-        }
+    width: 60px; /* 기존 60px → 80px */
+    height: 60px; /* 기존 60px → 80px */
+    font-size: 24px; /* 기존 24px → 28px */
+    padding: 10px; /* 기존 10px → 15px */
+    border-radius: 50%; /* 원형 유지 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
         .correct {
             color: lightgray;
         }
@@ -157,9 +222,9 @@ async function loadRanking() {
         function formatPattern(pattern) {
     return pattern
         .split('')
-        .map((num) => `<span class="pattern">${num}</span>`)
+        .map((num) => `<span class="pattern" data-value="${num}">${num}</span>`)
         .reduce((acc, curr, index) => acc + curr + ((index + 1) % 6 === 0 ? "<br>" : " "), "");
-} 
+}
 
         function generateQuestion() {
             clearTimeout(timer);
@@ -194,7 +259,7 @@ document.getElementById("output").innerHTML = formattedAnswer;
 
     let btn3 = document.createElement("button");
     btn3.innerText = "3";
-    btn3.classList.add("game-button");
+    btn3.classList.add("game-button", "button-3");
     addImmediateInputEvent(btn3, "3");
     buttonMap["3"] = btn3;
 
@@ -208,13 +273,13 @@ document.getElementById("output").innerHTML = formattedAnswer;
 
     let btn1 = document.createElement("button");
     btn1.innerText = "1";
-    btn1.classList.add("game-button");
+    btn1.classList.add("game-button", "button-1");
     addImmediateInputEvent(btn1, "1");
     buttonMap["1"] = btn1;
 
     let btn2 = document.createElement("button");
     btn2.innerText = "2";
-    btn2.classList.add("game-button");
+    btn2.classList.add("game-button", "button-2");
     addImmediateInputEvent(btn2, "2");
     buttonMap["2"] = btn2;
 
@@ -237,7 +302,7 @@ document.getElementById("output").innerHTML = formattedAnswer;
 
     let btn0 = document.createElement("button");
     btn0.innerText = "0";
-    btn0.classList.add("game-button");
+    btn0.classList.add("game-button", "button-0");
     addImmediateInputEvent(btn0, "0");
     buttonMap["0"] = btn0;
 
@@ -260,24 +325,25 @@ function addImmediateInputEvent(button, value) {
 }
 
         function handleInput(input) {
-            if (!gameActive) return;
-            inputSequence += input;
+    if (!gameActive) return;
+    inputSequence += input;
 
-            let patternElements = document.querySelectorAll(".pattern");
+    let patternElements = document.querySelectorAll(".pattern");
 
-            if (inputSequence.length <= patternElements.length) {
-                patternElements[inputSequence.length - 1].classList.add("correct");
-            }
+    if (inputSequence.length <= patternElements.length) {
+        let targetElement = patternElements[inputSequence.length - 1];
+        targetElement.classList.add("correct"); // 색상 어둡게 변경
+    }
 
-            if (inputSequence === currentAnswer) {
-                clearTimeout(timer);
-                round++;
-                document.getElementById("output").innerText = `통과! Round: ${round}`;
-                setTimeout(generateQuestion, 1000);
-            } else if (!currentAnswer.startsWith(inputSequence)) {
-                gameOver();
-            }
-        }
+    if (inputSequence === currentAnswer) {
+        clearTimeout(timer);
+        round++;
+        document.getElementById("output").innerText = `통과! Round: ${round}`;
+        setTimeout(generateQuestion, 1000);
+    } else if (!currentAnswer.startsWith(inputSequence)) {
+        gameOver();
+    }
+}
 
         function startTimer() {
             let timerBar = document.getElementById("timer-bar");

@@ -35,13 +35,21 @@
             font-weight: bold;
             margin-bottom: 20px;
         }
-        .game-buttons {
-            display: flex;
-            flex-wrap: nowrap;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 35px;
-        }
+        .game-button {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+    padding: 10px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+    transform: scale(1.2);
+    margin: 5px; /* 버튼 간 여백 추가 */
+}
+
+
         .button-1 {
     background-color: yellow;
     color: black;
@@ -105,16 +113,19 @@
     opacity: 0.6; /* 투명도를 살짝 낮춰서 연하게 */
 }
 
-        .game-button {
-    width: 60px; /* 기존 60px → 80px */
-    height: 60px; /* 기존 60px → 80px */
-    font-size: 24px; /* 기존 24px → 28px */
-    padding: 10px; /* 기존 10px → 15px */
-    border-radius: 50%; /* 원형 유지 */
+.game-button {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+    padding: 10px;
+    border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
+    
+    transform: scale(1.2);
 }
+
         .correct {
             color: lightgray;
         }
@@ -171,6 +182,16 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        let rowNumbers = document.createElement("div");
+rowNumbers.style.display = "flex";
+rowNumbers.style.justifyContent = "space-between";
+rowNumbers.style.gap = "400px";  // 버튼 사이에 20px 간격 추가
+rowNumbers.style.position = "relative";
+rowNumbers.style.top = "100px"; // 원하는 만큼 올리기
+
+// rowNumbers.style.width = "180px"; // 고정 폭 제거 또는 주석 처리
+
+
 
         let gameActive = false;
         let round = 0;
@@ -406,82 +427,6 @@ function generateQuestion() {
     startTimer();
 }
 
-        function renderButtons() {
-    let container = document.getElementById("button-container");
-    container.innerHTML = "";
-
-    let buttonMap = {};
-
-    // 버튼 컨테이너 스타일 설정
-    container.style.display = "flex";
-    container.style.flexDirection = "column";
-    container.style.alignItems = "center";
-
-    // 3 버튼을 포함하는 그룹
-    let btnGroup = document.createElement("div");
-    btnGroup.style.display = "flex";
-    btnGroup.style.flexDirection = "column";
-    btnGroup.style.alignItems = "center";
-
-    let btn3 = document.createElement("button");
-    btn3.innerText = "3";
-    btn3.classList.add("game-button", "button-3");
-    addImmediateInputEvent(btn3, "3");
-    buttonMap["3"] = btn3;
-
-    btnGroup.appendChild(btn3);
-
-    // 1과 2 버튼을 포함하는 그룹
-    let rowNumbers = document.createElement("div");
-    rowNumbers.style.display = "flex";
-    rowNumbers.style.justifyContent = "space-between";
-    rowNumbers.style.width = "120px"; // 1과 2 버튼 간격 조정
-
-    let btn1 = document.createElement("button");
-    btn1.innerText = "1";
-    btn1.classList.add("game-button", "button-1");
-    addImmediateInputEvent(btn1, "1");
-    buttonMap["1"] = btn1;
-
-    let btn2 = document.createElement("button");
-    btn2.innerText = "2";
-    btn2.classList.add("game-button", "button-2");
-    addImmediateInputEvent(btn2, "2");
-    buttonMap["2"] = btn2;
-
-    rowNumbers.appendChild(btn1);
-    rowNumbers.appendChild(btn2);
-    btnGroup.appendChild(rowNumbers);
-
-    // 하단 0 버튼을 포함하는 그룹
-    let rowBottom = document.createElement("div");
-    rowBottom.style.display = "flex";
-    rowBottom.style.alignItems = "center";
-    rowBottom.style.justifyContent = "space-between";
-    rowBottom.style.width = "250px"; // 1,2와 0 사이 간격을 넓힘
-
-    rowBottom.appendChild(btnGroup); // 3, 1, 2 버튼 그룹 추가
-
-    let spacer = document.createElement("div");
-    spacer.style.width = "80px"; // 1,2와 0 사이 간격 조절
-    rowBottom.appendChild(spacer);
-
-    let btn0 = document.createElement("button");
-    btn0.innerText = "0";
-    btn0.classList.add("game-button", "button-0");
-    addImmediateInputEvent(btn0, "0");
-    buttonMap["0"] = btn0;
-
-    rowBottom.appendChild(btn0);
-    
-    container.appendChild(rowBottom);
-}
-
-/**
- * 버튼을 누르자마자 입력되도록 이벤트 추가하는 함수
- * @param {HTMLElement} button 버튼 요소
- * @param {string} value 입력할 숫자
- */
 function addImmediateInputEvent(button, value) {
     button.onmousedown = () => {
         handleInput(value);
@@ -493,6 +438,98 @@ function addImmediateInputEvent(button, value) {
         playSound(value);
     };
 }
+
+
+function renderButtons() {
+    let container = document.getElementById("button-container");
+    container.innerHTML = "";
+
+    // 3 버튼 래퍼
+    let btnGroup = document.createElement("div");
+    btnGroup.style.display = "flex";
+    btnGroup.style.flexDirection = "column";
+    btnGroup.style.alignItems = "center";
+
+    let btn3Wrapper = document.createElement("div");
+    btn3Wrapper.style.width = "72px";   // 원래 버튼 크기 60px * 1.2
+    btn3Wrapper.style.height = "72px";
+    btn3Wrapper.style.display = "flex";
+    btn3Wrapper.style.justifyContent = "center";
+    btn3Wrapper.style.alignItems = "center";
+
+    let btn3 = document.createElement("button");
+    btn3.innerText = "3";
+    btn3.classList.add("game-button", "button-3");
+    addImmediateInputEvent(btn3, "3");
+    btn3Wrapper.appendChild(btn3);
+    btnGroup.appendChild(btn3Wrapper);
+
+    // 1, 2번 버튼 래퍼 (수평 배열)
+    let rowNumbers = document.createElement("div");
+    rowNumbers.style.display = "flex";
+    rowNumbers.style.gap = "20px"; // 버튼 사이에 간격 추가
+
+    let btn1Wrapper = document.createElement("div");
+    btn1Wrapper.style.width = "72px";
+    btn1Wrapper.style.height = "72px";
+    btn1Wrapper.style.display = "flex";
+    btn1Wrapper.style.justifyContent = "center";
+    btn1Wrapper.style.alignItems = "center";
+
+    let btn1 = document.createElement("button");
+    btn1.innerText = "1";
+    btn1.classList.add("game-button", "button-1");
+    addImmediateInputEvent(btn1, "1");
+    btn1Wrapper.appendChild(btn1);
+
+    let btn2Wrapper = document.createElement("div");
+    btn2Wrapper.style.width = "72px";
+    btn2Wrapper.style.height = "72px";
+    btn2Wrapper.style.display = "flex";
+    btn2Wrapper.style.justifyContent = "center";
+    btn2Wrapper.style.alignItems = "center";
+
+    let btn2 = document.createElement("button");
+    btn2.innerText = "2";
+    btn2.classList.add("game-button", "button-2");
+    addImmediateInputEvent(btn2, "2");
+    btn2Wrapper.appendChild(btn2);
+
+    rowNumbers.appendChild(btn1Wrapper);
+    rowNumbers.appendChild(btn2Wrapper);
+    btnGroup.appendChild(rowNumbers);
+
+    // 하단 0번 버튼 래퍼
+    let rowBottom = document.createElement("div");
+    rowBottom.style.display = "flex";
+    rowBottom.style.alignItems = "center";
+    rowBottom.style.justifyContent = "space-between";
+    rowBottom.style.width = "300px";
+
+    rowBottom.appendChild(btnGroup);
+
+    let spacer = document.createElement("div");
+    spacer.style.width = "300px"; // 좌우 간격
+    rowBottom.appendChild(spacer);
+
+    let btn0Wrapper = document.createElement("div");
+    btn0Wrapper.style.width = "72px";
+    btn0Wrapper.style.height = "72px";
+    btn0Wrapper.style.display = "flex";
+    btn0Wrapper.style.justifyContent = "center";
+    btn0Wrapper.style.alignItems = "center";
+    btn0Wrapper.style.marginBottom = "10px"; // 보라색 버튼
+
+    let btn0 = document.createElement("button");
+    btn0.innerText = "0";
+    btn0.classList.add("game-button", "button-0");
+    addImmediateInputEvent(btn0, "0");
+    btn0Wrapper.appendChild(btn0);
+    rowBottom.appendChild(btn0Wrapper);
+
+    container.appendChild(rowBottom);
+}
+
 
 
 

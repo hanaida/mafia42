@@ -279,24 +279,40 @@ rowNumbers.style.top = "100px"; // 원하는 만큼 올리기
 
         let rankingCache = "랭킹 불러오는 중..."; // 랭킹을 임시로 저장하는 변수
 
-async function loadRanking() {
+        async function loadRanking() {
     const rankingRef = collection(db, "game_results");
-    const rankingQuery = query(rankingRef, orderBy("round", "desc"), limit(5));
-    const rankingSnapshot = await getDocs(rankingQuery);
 
-    rankingCache = rankingSnapshot.empty 
+    // 라운드 기준 랭킹 (내림차순 정렬)
+    const roundQuery = query(rankingRef, orderBy("round", "desc"), limit(5));
+    const roundSnapshot = await getDocs(roundQuery);
+
+    const roundRanking = roundSnapshot.empty 
         ? "아직 랭킹 정보가 없습니다."
         : `<span style="color: red; font-weight: bold; font-size: 35px;">돼지의 전당</span><br>
-           <span style="color: black; font-size: 12px;">랭킹 보상(일요일 지급) - 1위 : 깜주 2-3위 : 깜엽 4-5위 : 주엽</span><br><br>` + 
-        Array.from(rankingSnapshot.docs, (doc, index) => 
-            `${index + 1}위: ${doc.data().nickname} - ${doc.data().round} round`
-        ).join("<br>");
+           <span style="color: black; font-size: 12px;">랭킹 보상(일요일 지급) - 1위 : 깜주 2-3위 : 깜엽 4-5위 : 주엽</span><br><br>
+           <span style="font-size: 20px; font-weight: bold;">🐷 라운드 부문</span><br><br>` + 
+          Array.from(roundSnapshot.docs, (doc, index) => 
+              `${index + 1}위: ${doc.data().nickname} - ${doc.data().round} round`
+          ).join("<br>");
+
+    // 판수 기준 랭킹 (내림차순 정렬)
+    const playCountQuery = query(rankingRef, orderBy("play_count", "desc"), limit(5));
+    const playCountSnapshot = await getDocs(playCountQuery);
+
+    const playCountRanking = playCountSnapshot.empty
+        ? ""
+        : `<br><br><span style="font-size: 20px; font-weight: bold;">🎮 판수 부문</span><br><br>` + 
+          Array.from(playCountSnapshot.docs, (doc, index) => 
+              `${index + 1}위: ${doc.data().nickname} - ${doc.data().play_count}판`
+          ).join("<br>");
+
+    // 최종 출력할 랭킹
+    rankingCache = roundRanking + playCountRanking;
 
     if (!gameActive) {
         document.getElementById("output").innerHTML = rankingCache;
     }
 }
-
 
 
 // 효과음 파일 경로 설정

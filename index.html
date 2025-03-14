@@ -131,9 +131,13 @@
 }
 /* 기존 스타일에 추가 */
 .correct::after {
-    filter: brightness(200%); /* 색상을 더 밝게 */
-    opacity: 0.6; /* 투명도를 살짝 낮춰서 연하게 */
+    filter: brightness(200%);
+    opacity: 0.6;
+    border: 2px solid #00aa00; /* 진한 초록색 테두리 */
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.8); /* 밝은 초록색 테두리 강조 효과 */
 }
+
+
 
 .game-button {
     width: 60px;
@@ -698,4 +702,3 @@ async function gameOver() {
 </footer>
 </html>
  
-

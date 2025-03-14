@@ -118,6 +118,27 @@
 
 /* 숫자별 원 색상 지정 */
 .pattern[data-value="1"]::after {
+    background-image: url("yellow.png");
+    background-size: cover;
+}
+
+.pattern[data-value="2"]::after {
+    background-image: url("orange.png");
+    background-size: cover;
+}
+
+.pattern[data-value="3"]::after {
+    background-image: url("red.png");
+    background-size: cover;
+}
+
+.pattern[data-value="0"]::after {
+    background-image: url("purple.png");
+    background-size: cover;
+}
+
+/*
+.pattern[data-value="1"]::after {
     background-color: yellow;
 }
 .pattern[data-value="2"]::after {
@@ -129,6 +150,8 @@
 .pattern[data-value="0"]::after {
     background-color: purple;
 }
+*/
+
 /* 기존 스타일에 추가 */
 .correct::after {
     filter: brightness(200%);
@@ -306,7 +329,7 @@ rowNumbers.style.top = "100px"; // 원하는 만큼 올리기
           ).join("<br>");
 
     // 최종 출력할 랭킹
-    rankingCache = roundRanking + playCountRanking + '<br><br><br><br>';
+    rankingCache = roundRanking + playCountRanking;
 
     if (!gameActive) {
         document.getElementById("output").innerHTML = rankingCache;

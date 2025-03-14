@@ -187,8 +187,10 @@
         <!-- 버튼 래퍼 (게임 시작 + 돼지 버튼) -->
         <div style="display: flex; justify-content: center; gap: 10px;">
             <button id="start-button">게임 시작</button>
+            <button id="nickname-button">닉네임 변경</button>
             <button id="pig-button">토끼</button>
         </div>
+        
 
         <p id="play-count">플레이 기록 불러오는 중...</p> <!-- 추가된 문구 -->
     </div>
@@ -235,7 +237,7 @@ rowNumbers.style.top = "100px"; // 원하는 만큼 올리기
 
         function promptNickname() {
             if (!nickname) {
-                nickname = prompt("닉네임을 입력하세요:");
+                nickname = prompt("닉네임을 입력하세요(맢닉 권장):");
                 if (!nickname) {
                     alert("닉네임을 입력해야 합니다.");
                     return false;
@@ -245,6 +247,14 @@ rowNumbers.style.top = "100px"; // 원하는 만큼 올리기
             return true;
         }
 
+        document.getElementById("nickname-button").addEventListener("click", function () {
+        let nickname = prompt("닉네임을 입력하세요(맢닉 권장):");
+        if (nickname) {
+            localStorage.setItem("nickname", nickname);
+            alert(`닉네임이 "${nickname}"(으)로 변경되었습니다!`);
+        }
+    });
+
         document.addEventListener("DOMContentLoaded", function () {
             document.getElementById("start-button").addEventListener("click", startGame);
              // 돼지 버튼 클릭 시 URL 이동
@@ -253,34 +263,19 @@ rowNumbers.style.top = "100px"; // 원하는 만큼 올리기
             });
         });
 
-async function loadPlayCount() {
-    const historyRef = collection(db, "game_history");
-    const now = new Date();
-    const past24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        async function loadPlayCount() {
+    const resultsRef = collection(db, "game_results");
+    const resultsSnapshot = await getDocs(resultsRef);
 
-    // 24시간 내 플레이 횟수 조회
-    const lastDayQuery = query(historyRef, orderBy("play_time", "desc"));
-    const lastDaySnapshot = await getDocs(lastDayQuery);
+    let totalCount = 0;
 
-    let last24HoursCount = 0;
-    let totalCount = lastDaySnapshot.size;
-
-    lastDaySnapshot.forEach((doc) => {
-        const playTime = new Date(doc.data().play_time);
-        if (playTime >= past24Hours) {
-            last24HoursCount++;
-        }
+    resultsSnapshot.forEach((doc) => {
+        totalCount += doc.data().play_count || 0;
     });
 
     document.getElementById("play-count").innerHTML = 
-    `24시간 동안 <span style="color: red;">총 ${last24HoursCount}회</span> 플레이되었습니다.<br>
-    지금까지 <span style="color: red;">총 ${totalCount}회</span> 플레이되었습니다.`;
+    `지금까지 <span style="color: red;">총 ${totalCount}회</span> 플레이되었습니다.`;
 }
-
-// 페이지 로드 시 플레이 횟수 정보 불러오기
-loadPlayCount();
-
-
 
         let rankingCache = "랭킹 불러오는 중..."; // 랭킹을 임시로 저장하는 변수
 
@@ -291,7 +286,7 @@ async function loadRanking() {
 
     rankingCache = rankingSnapshot.empty 
         ? "아직 랭킹 정보가 없습니다."
-        : `<span style="color: red; font-weight: bold; font-size: 35px;">명예의 전당</span><br>
+        : `<span style="color: red; font-weight: bold; font-size: 35px;">돼지의 전당</span><br>
            <span style="color: black; font-size: 12px;">랭킹 보상(일요일 지급) - 1위 : 깜주 2-3위 : 깜엽 4-5위 : 주엽</span><br><br>` + 
         Array.from(rankingSnapshot.docs, (doc, index) => 
             `${index + 1}위: ${doc.data().nickname} - ${doc.data().round} round`
@@ -392,14 +387,10 @@ async function loadUserRecord() {
         document.getElementById("user-info").innerHTML = 
             `닉네임: <b>${nickname}</b><br>최고 라운드: <b>기록 없음</b>`;
     }
+
 }
 
-
-
-
-        
-        
-        let backgroundMusic = new Audio("game-music.mp3"); // 오디오 파일 로드
+let backgroundMusic = new Audio("game-music.mp3"); // 오디오 파일 로드
 backgroundMusic.loop = true; // 반복 재생 설정
 
 function startGame() {
@@ -420,14 +411,8 @@ function startGame() {
         console.log("자동 재생이 차단됨. 유저 입력 후 재생 필요", error);
     });
     
-   // 사용자 기록 업데이트
-    loadUserRecord();
-    loadUserInfo();
 }
 
-// 페이지 로드 시 랭킹 & 사용자 기록 불러오기
-loadRanking();
-loadUserInfo();
 
         function getPatternLength() {
             return 6 + Math.floor(round / 5) * 2;
@@ -675,14 +660,6 @@ async function gameOver() {
     const userRef = doc(db, "game_results", nickname);
     const userSnap = await getDoc(userRef);
 
-    const gameRecord = {
-        nickname,
-        round,
-        play_time: new Date().toISOString(),
-        first_reaction_avg: avgFirstReaction,
-        reaction_avg: avgReaction
-    };
-
     if (userSnap.exists()) {
         const userData = userSnap.data();
         const updatedPlayCount = (userData.play_count || 0) + 1;
@@ -695,17 +672,17 @@ async function gameOver() {
     } else {
         await setDoc(userRef, { nickname, round, play_count: 1 });
     }
-
-    const historyRef = collection(db, "game_history");
-    await setDoc(doc(historyRef, `${nickname}_${Date.now()}`), gameRecord);
     
     await loadUserInfo();
     await loadPlayCount(); // 플레이 횟수 업데이트
 }
         window.startGame = startGame;
 
-        // 페이지 로드 시 랭킹 불러오기
+        // 페이지 로드 시 정보 불러오기
         loadRanking();
+        loadUserInfo();
+        loadPlayCount();
+
     </script>
 </body>
 <footer style="position: fixed; bottom: 10px; width: 100%; text-align: center; font-size: 14px; color: black;">

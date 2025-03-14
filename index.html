@@ -306,7 +306,7 @@ rowNumbers.style.top = "100px"; // 원하는 만큼 올리기
           ).join("<br>");
 
     // 최종 출력할 랭킹
-    rankingCache = roundRanking + playCountRanking;
+    rankingCache = roundRanking + playCountRanking + '<br><br><br><br>';
 
     if (!gameActive) {
         document.getElementById("output").innerHTML = rankingCache;

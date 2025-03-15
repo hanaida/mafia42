@@ -698,6 +698,14 @@ async function gameOver() {
     const userRef = doc(db, "game_results", nickname);
     const userSnap = await getDoc(userRef);
 
+    const gameRecord = {
+        nickname,
+        round,
+        play_time: new Date().toISOString(),
+        first_reaction_avg: avgFirstReaction,
+        reaction_avg: avgReaction
+    };
+
     if (userSnap.exists()) {
         const userData = userSnap.data();
         const updatedPlayCount = (userData.play_count || 0) + 1;
@@ -710,6 +718,9 @@ async function gameOver() {
     } else {
         await setDoc(userRef, { nickname, round, play_count: 1 });
     }
+
+    const historyRef = collection(db, "game_history");
+    await setDoc(doc(historyRef, `${nickname}_${Date.now()}`), gameRecord);
     
     await loadUserInfo();
     await loadPlayCount(); // 플레이 횟수 업데이트
@@ -729,4 +740,3 @@ async function gameOver() {
     문의 : insta @yejun0847
 </footer>
 </html>
- 

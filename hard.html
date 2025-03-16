@@ -662,7 +662,7 @@ async function gameOver() {
         Math.floor(firstReactionTimes.reduce((a, b) => a + b, 0) / firstReactionTimes.length) : 0;
     let avgReaction = reactionTimes.length > 0 ? 
         Math.floor(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length) : 0;
-let totalRound = 50 + round; /*하드모드 기준 더해진 라운드*/
+let totalRound = 45 + round; /*하드모드 기준 더해진 라운드*/
 
     document.getElementById("output").innerHTML = `
         게임 리포트<br><br>

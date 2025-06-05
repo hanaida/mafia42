@@ -709,6 +709,19 @@ let totalRound = 95 + round; /*하드모드 기준 더해진 라운드*/
         loadUserInfo();
         loadPlayCount();
 
+        // 키보드 입력 처리
+document.addEventListener("keydown", function (event) {
+    if (!gameActive || nextRoundPending) return;
+
+    const key = event.key;
+
+    if (["0", "1", "2", "3"].includes(key)) {
+        handleInput(key);
+        playSound(key);
+    }
+});
+
+
     </script>
 </body>
 <footer style="position: fixed; bottom: 10px; width: 100%; text-align: center; font-size: 14px; color: black;">

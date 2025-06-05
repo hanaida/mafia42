@@ -711,15 +711,23 @@ let totalRound = 95 + round; /*하드모드 기준 더해진 라운드*/
 
         // 키보드 입력 처리
 document.addEventListener("keydown", function (event) {
-    if (!gameActive || nextRoundPending) return;
-
     const key = event.key;
+
+    // 엔터 키로 게임 시작
+    if (key === "Enter" && !gameActive) {
+        startGame();
+        return;
+    }
+
+    // 게임 진행 중일 때만 키 입력 처리
+    if (!gameActive || nextRoundPending) return;
 
     if (["0", "1", "2", "3"].includes(key)) {
         handleInput(key);
         playSound(key);
     }
 });
+
 
 
     </script>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><span style="color: red;">하드모드-돼지</span></title>
+    <h1 id="game-title"><span style="color: red;">하드모드-돼지</span></h1>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -419,6 +419,7 @@ function startGame() {
     }
 
     gameActive = true;
+    document.getElementById("game-title").style.display = "none";
     round = 0;
     inputSequence = "";
     document.getElementById("start-buttons").style.display = "none";

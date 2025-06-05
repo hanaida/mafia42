@@ -723,10 +723,10 @@ document.addEventListener("keydown", function (event) {
     if (!gameActive || nextRoundPending) return;
 
     if (["0", "1", "2", "3"].includes(key)) {
-    const remappedKey = key === "2" ? "3" : key === "3" ? "2" : key;
-    handleInput(remappedKey);
-    playSound(remappedKey);
+    handleInput(key);
+    playSound(key);
 }
+
 
 });
 

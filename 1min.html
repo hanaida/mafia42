@@ -140,30 +140,30 @@
 
         // ======== 게임 상태 ========
         const GAME_DURATION_MS = 60_000; // 60초
-        const BASE_LEN = 1000;           // 시작 패턴 길이(사실상 매우 김)
-        const INCREASE_EVERY = 5;        // 완료한 패턴 5개마다
-        const INCREASE_STEP = 2;         // +2 증가
 
         // 줄 단위 뷰포트(항상 5줄)
         const ROW_SIZE = 6;
         const VISIBLE_ROWS = 5;
+
+        // 초기 패턴 5줄(30칸)만 생성 -> 이후 한 줄(6칸) 맞출 때마다 1줄씩 추가 생성
+        const INITIAL_CELLS = ROW_SIZE * VISIBLE_ROWS; // 30
 
         let gameActive = false;
         let timer;
         let nickname = localStorage.getItem("nickname");
 
         // 현재 패턴과 진행상태
-        let currentAnswer = "";
-        let inputSequence = "";
+        let currentAnswer = "";   // 누적 패턴(계속 늘어남)
+        let inputSequence = "";   // 사용자가 입력한 누적 문자열
 
         // 점수/통계
-        let score = 0;                 // ✅ 정확히 입력한 횟수(랭킹 지표)
-        let completedPatterns = 0;     // 길이 증가 규칙용(완료한 패턴 개수)
+        let score = 0;                 // 정확 입력 횟수
+        let completedRows = 0;         // 완료한 줄(6칸 단위) 수
 
         // 반응속도(옵션)
         let reactionTimes = [];
         let firstReactionTimes = [];
-        let patternStartTime;
+        let rowStartTime;   // 현재 줄이 시작된 시각
         let lastInputTime;
 
         // 생존 시간
@@ -283,6 +283,33 @@
         let backgroundMusic = new Audio("game-music.mp3");
         backgroundMusic.loop = true;
 
+        // ======== 패턴 생성 도우미 ========
+        // 규칙: 짝수 인덱스 -> 1/2/3 중 하나, 홀수 인덱스 -> '0' (기존 로직 유지)
+        function generateCellAt(index) {
+            if (index % 2 === 0) {
+                const colors = ["1", "2", "3"];
+                return colors[Math.floor(Math.random() * colors.length)];
+            } else {
+                return "0";
+            }
+        }
+
+        function appendNextRow() {
+            const startIdx = currentAnswer.length;
+            let row = "";
+            for (let i = 0; i < ROW_SIZE; i++) {
+                row += generateCellAt(startIdx + i);
+            }
+            currentAnswer += row;
+        }
+
+        function initFirstFiveRows() {
+            currentAnswer = "";
+            for (let i = 0; i < INITIAL_CELLS; i++) {
+                currentAnswer += generateCellAt(i);
+            }
+        }
+
         // ======== 게임 로직 ========
         function startGame() {
             if (!promptNickname()) return;
@@ -294,22 +321,28 @@
             // 상태 초기화
             gameActive = true;
             score = 0;
-            completedPatterns = 0;
+            completedRows = 0;
             reactionTimes = [];
             firstReactionTimes = [];
             inputSequence = "";
-            currentAnswer = "";
             viewportStartRow = 0;
-            gameStartTime = Date.now(); // ★ 생존 시간 시작
+            gameStartTime = Date.now();
 
             document.getElementById("start-buttons").style.display = "none";
             resetTimerBar();
             startGlobalTimer(GAME_DURATION_MS);
 
             backgroundMusic.play().catch(() => {});
-            generatePattern();  // 첫 패턴
+
+            // ★ 초기 5줄(30칸)만 생성
+            initFirstFiveRows();
+
+            // ★ 현재 줄 반응속도 기준점
+            rowStartTime = Date.now();
+            lastInputTime = null;
+
             renderButtons();
-            renderHUD();
+            renderHUD(true);
         }
 
         function startGlobalTimer(durationMs) {
@@ -332,11 +365,6 @@
             timerBar.style.width = "100%";
         }
 
-        // ★ 패턴 길이: 1000 + floor(완료패턴/5) * 2
-        function getPatternLength() {
-            return BASE_LEN + Math.floor(completedPatterns / INCREASE_EVERY) * INCREASE_STEP;
-        }
-
         // 보이는 5줄만 렌더링
         function formatPatternWindow(answer, typedLen) {
             const startIdx = viewportStartRow * ROW_SIZE;
@@ -351,30 +379,6 @@
                 else html += " ";
             }
             return html;
-        }
-
-        function generatePattern() {
-            patternStartTime = Date.now();
-            lastInputTime = null;
-
-            const len = getPatternLength();
-            const colors = ["1", "2", "3"];
-            currentAnswer = Array.from({ length: len }, (_, i) =>
-                (i % 2 === 0 ? colors[Math.floor(Math.random() * colors.length)] : "0")
-            ).join("");
-
-            inputSequence = "";
-            viewportStartRow = 0;
-
-            // ★ 위치 교체: 점수 먼저, 패턴 아래
-            document.getElementById("output").innerHTML =
-                `점수: ${score}<br><br>` +
-                formatPatternWindow(currentAnswer, 0);
-        }
-
-        function addImmediateInputEvent(button, value) {
-            button.onmousedown = () => { handleInput(value); playSound(value); };
-            button.ontouchstart = (e) => { e.preventDefault(); handleInput(value); playSound(value); };
         }
 
         function renderButtons() {
@@ -438,12 +442,19 @@
             container.appendChild(rowBottom);
         }
 
-        function renderHUD() {
+        function addImmediateInputEvent(button, value) {
+            button.onmousedown = () => { handleInput(value); playSound(value); };
+            button.ontouchstart = (e) => { e.preventDefault(); handleInput(value); playSound(value); };
+        }
+
+        function renderHUD(firstRender = false) {
             const out = document.getElementById("output");
-            // ★ 위치 교체: 점수 → 패턴
+            // 점수 위, 패턴 아래. 점수-패턴 사이 간격은 <br><br>로 확보.
             out.innerHTML =
                 `점수: ${score}<br><br>` +
                 formatPatternWindow(currentAnswer, inputSequence.length);
+
+            // 첫 렌더 시엔 뷰포트가 0줄부터 5줄까지 보이도록 이미 설정됨
         }
 
         function handleInput(input) {
@@ -451,7 +462,8 @@
 
             const now = Date.now();
             if (!lastInputTime) {
-                firstReactionTimes.push(now - patternStartTime);
+                // 현재 줄의 첫 입력 반응속도
+                firstReactionTimes.push(now - rowStartTime);
             } else {
                 reactionTimes.push(now - lastInputTime);
             }
@@ -465,22 +477,18 @@
                 return;
             }
 
-            // ✅ 정답 입력 1회 → 점수 +1
+            // 정답 입력 1회 → 점수 +1
             inputSequence = nextInputSequence;
             score += 1;
 
-            // 한 줄(6개) 입력 완료 시 뷰포트 스크롤
-            if (inputSequence.length % ROW_SIZE === 0 && inputSequence.length < currentAnswer.length) {
-                viewportStartRow++;
-            }
-
-            // 패턴 전체 완료 시 새 패턴 생성
-            if (inputSequence.length === currentAnswer.length) {
-                completedPatterns += 1;
-                // 점수만 잠깐 표시(위치 교체 반영)
-                document.getElementById("output").innerHTML = `점수: ${score}`;
-                setTimeout(() => { generatePattern(); renderHUD(); }, 150);
-                return;
+            // 한 줄(6칸) 완료 시: 뷰포트 한 줄 스크롤 + 다음 1줄(6칸) 즉시 추가 생성
+            if (inputSequence.length % ROW_SIZE === 0) {
+                completedRows += 1;
+                viewportStartRow++;          // 한 줄 위로 스크롤
+                appendNextRow();             // 다음 줄 동적 생성
+                // 다음 줄의 반응속도 기준점 초기화
+                rowStartTime = Date.now();
+                lastInputTime = null;
             }
 
             renderHUD();
@@ -505,7 +513,7 @@
                 ? Math.floor(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
                 : 0;
 
-            // ★ 생존 시간 계산(최대 60초)
+            // 생존 시간 계산(최대 60초)
             const survivedMs = Math.min(Date.now() - gameStartTime, GAME_DURATION_MS);
             const survivedSec = Math.round(survivedMs / 1000);
 
@@ -517,7 +525,7 @@
                 <strong>생존 시간:</strong> ${survivedSec}초
             `;
 
-            // ✅ 저장(새 컬렉션, score 기준)
+            // 저장(점수 기준)
             if (nickname) {
                 const userRef = doc(db, RESULTS_COLL, nickname);
                 const userSnap = await getDoc(userRef);
@@ -525,14 +533,14 @@
                 const gameRecord = {
                     nickname,
                     score,
-                    completed_patterns: completedPatterns,
+                    completed_rows: completedRows,
                     play_time: new Date().toISOString(),
                     first_reaction_avg: avgFirstReaction,
                     reaction_avg: avgReaction,
-                    last_pattern_length: getPatternLength(),
-                    mode: "1min_tapscore_scrolling5rows",
+                    last_pattern_length: currentAnswer.length, // 마지막까지 누적된 패턴 길이
+                    mode: "1min_tapscore_lazyrowgen5rows",
                     end_reason: byMistake ? "mistake" : "timeup",
-                    survived_seconds: survivedSec // ★ 기록에 생존 시간 포함(선택)
+                    survived_seconds: survivedSec
                 };
 
                 if (userSnap.exists()) {
@@ -540,12 +548,21 @@
                     const updatedPlayCount = (userData.play_count || 0) + 1;
 
                     if (score > (userData.score || 0)) {
-                        await setDoc(userRef, { ...userData, score, completed_patterns: Math.max(completedPatterns, userData.completed_patterns || 0), play_count: updatedPlayCount });
+                        await setDoc(userRef, {
+                            ...userData,
+                            score,
+                            completed_rows: Math.max(completedRows, userData.completed_rows || 0),
+                            play_count: updatedPlayCount
+                        });
                     } else {
-                        await setDoc(userRef, { ...userData, play_count: updatedPlayCount, completed_patterns: Math.max(completedPatterns, userData.completed_patterns || 0) });
+                        await setDoc(userRef, {
+                            ...userData,
+                            play_count: updatedPlayCount,
+                            completed_rows: Math.max(completedRows, userData.completed_rows || 0)
+                        });
                     }
                 } else {
-                    await setDoc(userRef, { nickname, score, completed_patterns: completedPatterns, play_count: 1 });
+                    await setDoc(userRef, { nickname, score, completed_rows: completedRows, play_count: 1 });
                 }
 
                 const historyRef = collection(db, HISTORY_COLL);

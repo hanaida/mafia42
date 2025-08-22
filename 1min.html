@@ -96,7 +96,7 @@
 </head>
 <body>
     <div id="timer-bar"></div>
-    <h1>떡치기-돼지 (1분 · 오답=게임오버 · 5줄 뷰)</h1>
+    <h1>떡치기-돼지 (1분)</h1>
 
     <div id="start-buttons">
         <p id="user-info">사용자 정보를 불러오는 중...</p>
@@ -107,8 +107,8 @@
         </div>
         <p id="play-count">플레이 기록 불러오는 중...</p>
         <p style="font-size:14px; color:#444; margin-top:8px;">
-            60초 동안 가능한 한 많은 <b>정확한 입력</b>을 하세요! <b>(오답 시 즉시 게임오버)</b><br>
-            패턴 길이는 <b>완료한 패턴 5개</b>마다 +2씩 증가합니다. (점수는 <b>입력 1회당 +1</b>)
+            1분 동안 최대한 많은 점수를 획득하세요!<br>
+            패턴은 끊임없이 제시됩니다.
         </p>
     </div>
 
@@ -258,7 +258,7 @@
 
             document.getElementById("user-info").innerHTML = `
                 <strong>닉네임:</strong> ${nickname} <br>
-                <strong>최고 점수(1분):</strong> ${userBest} <br>
+                <strong>최고 점수:</strong> ${userBest} <br>
                 <strong>랭킹:</strong> 전체 ${totalPlayers}명 중 <span style="color: blue;">${userRank}등</span>
             `;
         }

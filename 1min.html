@@ -96,7 +96,7 @@
 </head>
 <body>
     <div id="timer-bar"></div>
-    <h1>떡치기-돼지 (1분 · 오답=게임오버 · 패턴무한증가)</h1>
+    <h1>떡치기-돼지 (1분 · 오답=게임오버 · 5줄 뷰 · 누를 때마다 +1점)</h1>
 
     <div id="start-buttons">
         <p id="user-info">사용자 정보를 불러오는 중...</p>
@@ -107,8 +107,8 @@
         </div>
         <p id="play-count">플레이 기록 불러오는 중...</p>
         <p style="font-size:14px; color:#444; margin-top:8px;">
-            60초 동안 가능한 한 많은 패턴을 맞추세요! <b>(오답 시 즉시 게임오버)</b><br>
-            패턴 길이는 <b>5개 맞출 때마다 +2</b>씩 계속 증가합니다.
+            60초 동안 가능한 한 많은 입력을 맞추세요! <b>(오답 시 즉시 게임오버)</b><br>
+            화면에는 항상 <b>5줄(줄당 6개)</b>만 표시되며, <b>6개 입력</b> 때마다 한 줄씩 위로 스크롤됩니다.
         </p>
     </div>
 
@@ -117,435 +117,436 @@
         <div id="button-container" class="game-buttons"></div>
     </div>
 
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+        import { getFirestore, setDoc, getDoc, doc, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
+        const firebaseConfig = {
+            apiKey: "AIzaSyC1RCO59Qr1ogsZ1GNwxY9O2KGgMaFMyUM",
+            authDomain: "mafia-5c957.firebaseapp.com",
+            databaseURL: "https://mafia-5c957-default-rtdb.firebaseio.com",
+            projectId: "mafia-5c957",
+            storageBucket: "mafia-5c957.firebasestorage.app",
+            messagingSenderId: "979859367108",
+            appId: "1:979859367108:web:6f94ed2e25ca82d762d591"
+        };
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
-    import { getFirestore, setDoc, getDoc, doc, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyC1RCO59Qr1ogsZ1GNwxY9O2KGgMaFMyUM",
-        authDomain: "mafia-5c957.firebaseapp.com",
-        databaseURL: "https://mafia-5c957-default-rtdb.firebaseio.com",
-        projectId: "mafia-5c957",
-        storageBucket: "mafia-5c957.firebasestorage.app",
-        messagingSenderId: "979859367108",
-        appId: "1:979859367108:web:6f94ed2e25ca82d762d591"
-    };
+        // ==== 새 컬렉션(기존과 분리) ====
+        const RESULTS_COLL = "game_results_hits";   // 정답 입력 수 기반 랭킹
+        const HISTORY_COLL = "game_history_hits";
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+        // ==== 게임 상태 ====
+        const GAME_DURATION_MS = 60_000; // 60초
+        const BASE_LEN = 1000;           // 시작 시퀀스 길이(크게 설정)
+        const INCREASE_EVERY = 5;        // 패턴(시퀀스) 완료마다 길이 증가 조건(남겨둠)
+        const INCREASE_STEP = 2;
 
-    // ======== 새 컬렉션(기존과 분리) ========
-    const RESULTS_COLL = "game_results_infinite";   // 기존 game_results 와 분리
-    const HISTORY_COLL = "game_history_infinite";   // 기존 game_history 와 분리
-    // 필드명도 round → patterns 로 변경
+        // 뷰포트: 항상 5줄
+        const ROW_SIZE = 6;
+        const VISIBLE_ROWS = 5;
 
-    // ======== 게임 상태 ========
-    const GAME_DURATION_MS = 60_000; // 60초
-    const BASE_LEN = 1000;           // 시작 패턴 길이(= 한 패턴)
-    const INCREASE_EVERY = 5;        // 5개 맞출 때마다
-    const INCREASE_STEP = 2;         // +2 증가
+        let gameActive = false;
+        let timer;
+        let nickname = localStorage.getItem("nickname");
 
-    // 줄-뷰포트 설정(항상 5줄만 보이기)
-    const ROW_SIZE = 6;
-    const VISIBLE_ROWS = 5;
+        let currentAnswer = "";
+        let inputSequence = "";
 
-    let gameActive = false;
-    let timer;
-    let nickname = localStorage.getItem("nickname");
+        // ✅ 점수 = 누를 때마다 +1(정답일 때만)
+        let score = 0;
 
-    let currentAnswer = "";
-    let inputSequence = "";
-    let patternsCleared = 0;  // ✅ “완료한 패턴 개수(=랭킹 지표)”
+        // 반응속도(옵션)
+        let reactionTimes = [];
+        let firstReactionTimes = [];
+        let patternStartTime;
+        let lastInputTime;
 
-    // 반응속도(옵션)
-    let reactionTimes = [];
-    let firstReactionTimes = [];
-    let patternStartTime;
-    let lastInputTime;
+        // 뷰포트 시작 줄
+        let viewportStartRow = 0;
 
-    // 뷰포트 시작 줄
-    let viewportStartRow = 0;
-
-    // ======== 닉네임 ========
-    function promptNickname() {
-        if (!nickname) {
-            nickname = prompt("닉네임을 입력하세요(맢닉 권장):");
+        // ==== 닉네임 ====
+        function promptNickname() {
             if (!nickname) {
-                alert("닉네임을 입력해야 합니다.");
-                return false;
+                nickname = prompt("닉네임을 입력하세요(맢닉 권장):");
+                if (!nickname) {
+                    alert("닉네임을 입력해야 합니다.");
+                    return false;
+                }
+                localStorage.setItem("nickname", nickname);
             }
-            localStorage.setItem("nickname", nickname);
+            return true;
         }
-        return true;
-    }
 
-    document.getElementById("nickname-button").addEventListener("click", function () {
-        let nn = prompt("닉네임을 입력하세요(맢닉 권장):");
-        if (nn) {
-            nickname = nn;
-            localStorage.setItem("nickname", nickname);
-            alert(`닉네임이 "${nickname}"(으)로 변경되었습니다!`);
-            loadUserInfo();
-        }
-    });
-
-    document.addEventListener("DOMContentLoaded", function () {
-        document.getElementById("start-button").addEventListener("click", startGame);
-        document.getElementById("pig-button").addEventListener("click", function () {
-            window.location.href = "https://hanaida.github.io/rabbit/";
+        document.getElementById("nickname-button").addEventListener("click", function () {
+            let nn = prompt("닉네임을 입력하세요(맢닉 권장):");
+            if (nn) {
+                nickname = nn;
+                localStorage.setItem("nickname", nickname);
+                alert(`닉네임이 "${nickname}"(으)로 변경되었습니다!`);
+                loadUserInfo();
+            }
         });
-    });
 
-    // ======== 랭킹/정보(새 컬렉션, 새 지표) ========
-    async function loadPlayCount() {
-        const resultsRef = collection(db, RESULTS_COLL);
-        const resultsSnapshot = await getDocs(resultsRef);
-        let totalCount = 0;
-        resultsSnapshot.forEach((d) => { totalCount += d.data().play_count || 0; });
-        document.getElementById("play-count").innerHTML =
-            `지금까지 <span style="color: red;">총 ${totalCount}회</span> 플레이되었습니다.`;
-    }
-
-    let rankingCache = "랭킹 불러오는 중...";
-    async function loadRanking() {
-        const rankingRef = collection(db, RESULTS_COLL);
-        // ✅ patterns(완료한 패턴 수) 기준 내림차순
-        const scoreQuery = query(rankingRef, orderBy("patterns", "desc"), limit(5));
-        const scoreSnapshot = await getDocs(scoreQuery);
-
-        const scoreRanking = scoreSnapshot.empty
-            ? "아직 랭킹 정보가 없습니다."
-            : `<span style="color: red; font-weight: bold; font-size: 35px;">돼지의 전당</span><br><br>
-               <span style="font-size: 20px; font-weight: bold;">🏁 패턴(1000길이) 완료 개수 부문 (1분)</span><br><br>` +
-              Array.from(scoreSnapshot.docs, (doc, index) =>
-                  `${index + 1}위: ${doc.data().nickname} - ${doc.data().patterns} 패턴`
-              ).join("<br>");
-
-        rankingCache = scoreRanking + '<br><br><br><br>';
-        if (!gameActive) {
-            document.getElementById("output").innerHTML = rankingCache;
-        }
-    }
-
-    async function loadUserInfo() {
-        if (!nickname) {
-            document.getElementById("user-info").innerText = "닉네임을 설정해주세요.";
-            return;
-        }
-        const userRef = doc(db, RESULTS_COLL, nickname);
-        const userSnap = await getDoc(userRef);
-
-        let userBest = 0;
-        let totalPlayers = 0;
-        let userRank = "데이터 없음";
-
-        if (userSnap.exists()) {
-            userBest = userSnap.data().patterns || 0;   // ✅ 최고 “패턴 완료 개수”
-        }
-        const rankingRef = collection(db, RESULTS_COLL);
-        const rankingQuery = query(rankingRef, orderBy("patterns", "desc"));
-        const rankingSnapshot = await getDocs(rankingQuery);
-        totalPlayers = rankingSnapshot.size;
-
-        let rank = 1;
-        for (const d of rankingSnapshot.docs) {
-            if (d.id === nickname) { userRank = rank; break; }
-            rank++;
-        }
-
-        document.getElementById("user-info").innerHTML = `
-            <strong>닉네임:</strong> ${nickname} <br>
-            <strong>최고 패턴 완료(1분):</strong> ${userBest} <br>
-            <strong>랭킹:</strong> 전체 ${totalPlayers}명 중 <span style="color: blue;">${userRank}등</span>
-        `;
-    }
-
-    // ======== 사운드(선택) ========
-    const soundEffects = {
-        "1": new Audio("sound1.mp3"),
-        "2": new Audio("sound2.mp3"),
-        "3": new Audio("sound3.mp3"),
-        "0": new Audio("sound0.mp3")
-    };
-    Object.values(soundEffects).forEach(a => a.load());
-    function playSound(key) {
-        if (soundEffects[key]) {
-            let snd = soundEffects[key].cloneNode();
-            snd.play().catch(() => {});
-        }
-    }
-
-    let backgroundMusic = new Audio("game-music.mp3");
-    backgroundMusic.loop = true;
-
-    // ======== 게임 로직 ========
-    function startGame() {
-        if (!promptNickname()) return;
-        if (gameActive) {
-            alert("이미 게임이 진행 중입니다.");
-            return;
-        }
-
-        gameActive = true;
-        patternsCleared = 0; // ✅ 랭킹 지표
-        reactionTimes = [];
-        firstReactionTimes = [];
-        inputSequence = "";
-        currentAnswer = "";
-        viewportStartRow = 0;
-
-        document.getElementById("start-buttons").style.display = "none";
-        resetTimerBar();
-        startGlobalTimer(GAME_DURATION_MS);
-
-        backgroundMusic.play().catch(() => {});
-        generatePattern();
-        renderButtons();
-        renderHUD();
-    }
-
-    function startGlobalTimer(durationMs) {
-        clearTimeout(timer);
-        const timerBar = document.getElementById("timer-bar");
-        timerBar.style.transition = "none";
-        timerBar.style.width = "100%";
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                timerBar.style.transition = `width ${durationMs}ms linear`;
-                timerBar.style.width = "0%";
+        document.addEventListener("DOMContentLoaded", function () {
+            document.getElementById("start-button").addEventListener("click", startGame);
+            document.getElementById("pig-button").addEventListener("click", function () {
+                window.location.href = "https://hanaida.github.io/rabbit/";
             });
         });
-        timer = setTimeout(() => endGame(false), durationMs);
-    }
 
-    function resetTimerBar() {
-        const timerBar = document.getElementById("timer-bar");
-        timerBar.style.transition = "none";
-        timerBar.style.width = "100%";
-    }
-
-    // ★ 패턴 길이
-    function getPatternLength() {
-        return BASE_LEN + Math.floor(patternsCleared / INCREASE_EVERY) * INCREASE_STEP;
-    }
-
-    // 보이는 5줄만 렌더링
-    function formatPatternWindow(answer, typedLen) {
-        const startIdx = viewportStartRow * ROW_SIZE;
-        const endIdx = Math.min(answer.length, startIdx + VISIBLE_ROWS * ROW_SIZE);
-
-        let html = "";
-        for (let i = startIdx; i < endIdx; i++) {
-            const ch = answer[i];
-            const wasTyped = i < typedLen;
-            html += `<span class="pattern${wasTyped ? " correct" : ""}" data-value="${ch}">${ch}</span>`;
-            if ((i - startIdx + 1) % ROW_SIZE === 0) html += "<br>";
-            else html += " ";
-        }
-        return html;
-    }
-
-    function generatePattern() {
-        patternStartTime = Date.now();
-        lastInputTime = null;
-
-        const len = getPatternLength();
-        const colors = ["1", "2", "3"];
-        currentAnswer = Array.from({ length: len }, (_, i) =>
-            (i % 2 === 0 ? colors[Math.floor(Math.random() * colors.length)] : "0")
-        ).join("");
-
-        inputSequence = "";
-        viewportStartRow = 0;
-
-        document.getElementById("output").innerHTML =
-            formatPatternWindow(currentAnswer, 0) +
-            `<br>현재 점수(완료 패턴 수): ${patternsCleared} (이번 패턴 길이: ${len})`;
-    }
-
-    function addImmediateInputEvent(button, value) {
-        button.onmousedown = () => { handleInput(value); playSound(value); };
-        button.ontouchstart = (e) => { e.preventDefault(); handleInput(value); playSound(value); };
-    }
-
-    function renderButtons() {
-        const container = document.getElementById("button-container");
-        container.innerHTML = "";
-
-        // 위: 3
-        let btnGroup = document.createElement("div");
-        btnGroup.style.display = "flex";
-        btnGroup.style.flexDirection = "column";
-        btnGroup.style.alignItems = "center";
-
-        let btn3Wrapper = document.createElement("div");
-        btn3Wrapper.style.width = "72px"; btn3Wrapper.style.height = "72px";
-        btn3Wrapper.style.display = "flex"; btn3Wrapper.style.justifyContent = "center"; btn3Wrapper.style.alignItems = "center";
-        let btn3 = document.createElement("button");
-        btn3.innerText = "3"; btn3.classList.add("game-button", "button-3");
-        addImmediateInputEvent(btn3, "3");
-        btn3Wrapper.appendChild(btn3);
-        btnGroup.appendChild(btn3Wrapper);
-
-        // 가운데: 1,2
-        let rowNumbers = document.createElement("div");
-        rowNumbers.style.display = "flex"; rowNumbers.style.gap = "20px";
-
-        const mkBtn = (label, cls) => {
-            let wrap = document.createElement("div");
-            wrap.style.width = "72px"; wrap.style.height = "72px";
-            wrap.style.display = "flex"; wrap.style.justifyContent = "center"; wrap.style.alignItems = "center";
-            const b = document.createElement("button");
-            b.innerText = label; b.classList.add("game-button", cls);
-            addImmediateInputEvent(b, label);
-            wrap.appendChild(b);
-            return wrap;
-        };
-        rowNumbers.appendChild(mkBtn("1", "button-1"));
-        rowNumbers.appendChild(mkBtn("2", "button-2"));
-        btnGroup.appendChild(rowNumbers);
-
-        // 아래: 0
-        let rowBottom = document.createElement("div");
-        rowBottom.style.display = "flex"; rowBottom.style.alignItems = "center";
-        rowBottom.style.justifyContent = "space-between"; rowBottom.style.width = "300px";
-
-        rowBottom.appendChild(btnGroup);
-
-        let spacer = document.createElement("div");
-        spacer.style.width = "300px";
-        rowBottom.appendChild(spacer);
-
-        let btn0Wrapper = document.createElement("div");
-        btn0Wrapper.style.width = "72px"; btn0Wrapper.style.height = "72px";
-        btn0Wrapper.style.display = "flex"; btn0Wrapper.style.justifyContent = "center"; btn0Wrapper.style.alignItems = "center";
-        btn0Wrapper.style.marginBottom = "-75px";
-        let btn0 = document.createElement("button");
-        btn0.innerText = "0"; btn0.classList.add("game-button", "button-0");
-        addImmediateInputEvent(btn0, "0");
-        btn0Wrapper.appendChild(btn0);
-        rowBottom.appendChild(btn0Wrapper);
-
-        container.appendChild(rowBottom);
-    }
-
-    function renderHUD() {
-        const out = document.getElementById("output");
-        out.innerHTML = formatPatternWindow(currentAnswer, inputSequence.length) +
-            `<br>현재 점수(완료 패턴 수): ${patternsCleared} (이번 패턴 길이: ${getPatternLength()})`;
-    }
-
-    function handleInput(input) {
-        if (!gameActive) return;
-
-        const now = Date.now();
-        if (!lastInputTime) {
-            firstReactionTimes.push(now - patternStartTime);
-        } else {
-            reactionTimes.push(now - lastInputTime);
-        }
-        lastInputTime = now;
-
-        inputSequence += input;
-
-        // 즉시 오답 체크
-        if (!currentAnswer.startsWith(inputSequence)) {
-            endGame(true);
-            return;
+        // ==== 랭킹/정보(정답 입력 수 기반) ====
+        async function loadPlayCount() {
+            const resultsRef = collection(db, RESULTS_COLL);
+            const resultsSnapshot = await getDocs(resultsRef);
+            let totalCount = 0;
+            resultsSnapshot.forEach((d) => { totalCount += d.data().play_count || 0; });
+            document.getElementById("play-count").innerHTML =
+                `지금까지 <span style="color: red;">총 ${totalCount}회</span> 플레이되었습니다.`;
         }
 
-        // 한 줄(6개) 입력 완료 시 뷰포트 스크롤
-        if (inputSequence.length % ROW_SIZE === 0 && inputSequence.length < currentAnswer.length) {
-            viewportStartRow++;
+        let rankingCache = "랭킹 불러오는 중...";
+        async function loadRanking() {
+            const rankingRef = collection(db, RESULTS_COLL);
+            const scoreQuery = query(rankingRef, orderBy("score", "desc"), limit(5)); // ✅ score 기준
+            const scoreSnapshot = await getDocs(scoreQuery);
+
+            const scoreRanking = scoreSnapshot.empty
+                ? "아직 랭킹 정보가 없습니다."
+                : `<span style="color: red; font-weight: bold; font-size: 35px;">돼지의 전당</span><br><br>
+                   <span style="font-size: 20px; font-weight: bold;">🏁 정답 입력 수(1분)</span><br><br>` +
+                  Array.from(scoreSnapshot.docs, (doc, index) =>
+                      `${index + 1}위: ${doc.data().nickname} - ${doc.data().score} 점`
+                  ).join("<br>");
+
+            rankingCache = scoreRanking + '<br><br><br><br>';
+            if (!gameActive) {
+                document.getElementById("output").innerHTML = rankingCache;
+            }
         }
 
-        // 패턴 전체 정답(= 1000길이 이상 시퀀스 완료)
-        if (inputSequence.length === currentAnswer.length) {
-            patternsCleared++; // ✅ 랭킹 지표 +1
-            document.getElementById("output").innerHTML =
-                `✅ 통과! 현재 점수(완료 패턴 수): ${patternsCleared} (다음 패턴 길이: ${getPatternLength()})`;
-            setTimeout(() => { generatePattern(); renderHUD(); }, 200);
-            return;
-        }
-
-        renderHUD();
-    }
-
-    async function endGame(byMistake = false) {
-        if (!gameActive) return;
-        gameActive = false;
-
-        clearTimeout(timer);
-        resetTimerBar();
-
-        try { if (byMistake) new Audio("game-over.mp3").play().catch(()=>{}); } catch(e){}
-
-        backgroundMusic.pause();
-        backgroundMusic.currentTime = 0;
-
-        const avgFirstReaction = firstReactionTimes.length > 0
-            ? Math.floor(firstReactionTimes.reduce((a, b) => a + b, 0) / firstReactionTimes.length)
-            : 0;
-        const avgReaction = reactionTimes.length > 0
-            ? Math.floor(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
-            : 0;
-
-        document.getElementById("start-buttons").style.display = "block";
-        document.getElementById("output").innerHTML = `
-            게임 리포트 (1분)<br><br>
-            <strong>완료한 패턴 수(랭킹 지표):</strong> ${patternsCleared}<br>
-            <strong>종료 사유:</strong> ${byMistake ? "오답" : "시간 종료"}<br>
-            <strong>첫 반응속도 평균:</strong> ${avgFirstReaction} ms<br>
-            <strong>입력 간 평균 속도:</strong> ${avgReaction} ms
-        `;
-
-        // ✅ 저장(새 컬렉션, 새 필드명)
-        if (nickname) {
+        async function loadUserInfo() {
+            if (!nickname) {
+                document.getElementById("user-info").innerText = "닉네임을 설정해주세요.";
+                return;
+            }
             const userRef = doc(db, RESULTS_COLL, nickname);
             const userSnap = await getDoc(userRef);
 
-            const gameRecord = {
-                nickname,
-                patterns: patternsCleared,                // ✅ 랭킹 지표
-                play_time: new Date().toISOString(),
-                first_reaction_avg: avgFirstReaction,
-                reaction_avg: avgReaction,
-                pattern_length: getPatternLength(),       // 참고용
-                mode: "1min_infinite_1000",
-                end_reason: byMistake ? "mistake" : "timeup"
-            };
+            let userBest = 0;
+            let totalPlayers = 0;
+            let userRank = "데이터 없음";
 
             if (userSnap.exists()) {
-                const userData = userSnap.data();
-                const updatedPlayCount = (userData.play_count || 0) + 1;
+                userBest = userSnap.data().score || 0;   // ✅ 최고 점수(정답 입력 수)
+            }
+            const rankingRef = collection(db, RESULTS_COLL);
+            const rankingQuery = query(rankingRef, orderBy("score", "desc"));
+            const rankingSnapshot = await getDocs(rankingQuery);
+            totalPlayers = rankingSnapshot.size;
 
-                // 최고기록 갱신이면 patterns 업데이트
-                if (patternsCleared > (userData.patterns || 0)) {
-                    await setDoc(userRef, { ...userData, patterns: patternsCleared, play_count: updatedPlayCount });
-                } else {
-                    await setDoc(userRef, { ...userData, play_count: updatedPlayCount });
-                }
-            } else {
-                await setDoc(userRef, { nickname, patterns: patternsCleared, play_count: 1 });
+            let rank = 1;
+            for (const d of rankingSnapshot.docs) {
+                if (d.id === nickname) { userRank = rank; break; }
+                rank++;
             }
 
-            // 히스토리도 분리 컬렉션에 저장
-            const historyRef = collection(db, HISTORY_COLL);
-            await setDoc(doc(historyRef, `${nickname}_${Date.now()}`), gameRecord);
+            document.getElementById("user-info").innerHTML = `
+                <strong>닉네임:</strong> ${nickname} <br>
+                <strong>최고 점수(1분):</strong> ${userBest} <br>
+                <strong>랭킹:</strong> 전체 ${totalPlayers}명 중 <span style="color: blue;">${userRank}등</span>
+            `;
         }
 
-        await loadUserInfo();
-        await loadPlayCount();
-        await loadRanking();
-    }
+        // ==== 사운드(선택) ====
+        const soundEffects = {
+            "1": new Audio("sound1.mp3"),
+            "2": new Audio("sound2.mp3"),
+            "3": new Audio("sound3.mp3"),
+            "0": new Audio("sound0.mp3")
+        };
+        Object.values(soundEffects).forEach(a => a.load());
+        function playSound(key) {
+            if (soundEffects[key]) {
+                let snd = soundEffects[key].cloneNode();
+                snd.play().catch(() => {});
+            }
+        }
 
-    // 초기 로딩
-    loadRanking();
-    loadUserInfo();
-    loadPlayCount();
-   </script>
+        let backgroundMusic = new Audio("game-music.mp3");
+        backgroundMusic.loop = true;
+
+        // ==== 게임 로직 ====
+        function startGame() {
+            if (!promptNickname()) return;
+            if (gameActive) {
+                alert("이미 게임이 진행 중입니다.");
+                return;
+            }
+
+            // 상태 초기화
+            gameActive = true;
+            score = 0; // ✅ 점수 초기화
+            reactionTimes = [];
+            firstReactionTimes = [];
+            inputSequence = "";
+            currentAnswer = "";
+            viewportStartRow = 0;
+
+            document.getElementById("start-buttons").style.display = "none";
+            resetTimerBar();
+            startGlobalTimer(GAME_DURATION_MS);
+
+            backgroundMusic.play().catch(() => {});
+            generatePattern();  // 첫 시퀀스
+            renderButtons();
+            renderHUD();
+        }
+
+        function startGlobalTimer(durationMs) {
+            clearTimeout(timer);
+            const timerBar = document.getElementById("timer-bar");
+            timerBar.style.transition = "none";
+            timerBar.style.width = "100%";
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    timerBar.style.transition = `width ${durationMs}ms linear`;
+                    timerBar.style.width = "0%";
+                });
+            });
+            timer = setTimeout(() => endGame(false), durationMs); // 시간 만료
+        }
+
+        function resetTimerBar() {
+            const timerBar = document.getElementById("timer-bar");
+            timerBar.style.transition = "none";
+            timerBar.style.width = "100%";
+        }
+
+        // 시퀀스 길이(완료할 때마다 증가하도록 로직 유지, 실제 점수와는 무관)
+        function getPatternLength() {
+            // 완료 시퀀스 수를 따로 세지 않으므로 길이 고정/점진 중 선택 가능
+            // 필요 시 아래를 항상 BASE_LEN로 유지해도 됨.
+            return BASE_LEN;
+            // 혹은 다음과 같이 시퀀스 완료 수를 저장해서 증가시키려면 별도 카운트를 두면 됨.
+        }
+
+        // 5줄 창만 렌더링
+        function formatPatternWindow(answer, typedLen) {
+            const startIdx = viewportStartRow * ROW_SIZE;
+            const endIdx = Math.min(answer.length, startIdx + VISIBLE_ROWS * ROW_SIZE);
+
+            let html = "";
+            for (let i = startIdx; i < endIdx; i++) {
+                const ch = answer[i];
+                const wasTyped = i < typedLen;
+                html += `<span class="pattern${wasTyped ? " correct" : ""}" data-value="${ch}">${ch}</span>`;
+                if ((i - startIdx + 1) % ROW_SIZE === 0) html += "<br>";
+                else html += " ";
+            }
+            return html;
+        }
+
+        function generatePattern() {
+            patternStartTime = Date.now();
+            lastInputTime = null;
+
+            const len = getPatternLength();
+            const colors = ["1", "2", "3"];
+            currentAnswer = Array.from({ length: len }, (_, i) =>
+                (i % 2 === 0 ? colors[Math.floor(Math.random() * colors.length)] : "0")
+            ).join("");
+
+            inputSequence = "";
+            viewportStartRow = 0;
+
+            document.getElementById("output").innerHTML =
+                formatPatternWindow(currentAnswer, 0) +
+                `<br>현재 점수: ${score} (시퀀스 길이: ${len})`;
+        }
+
+        function addImmediateInputEvent(button, value) {
+            button.onmousedown = () => { handleInput(value); playSound(value); };
+            button.ontouchstart = (e) => { e.preventDefault(); handleInput(value); playSound(value); };
+        }
+
+        function renderButtons() {
+            const container = document.getElementById("button-container");
+            container.innerHTML = "";
+
+            // 위: 3
+            let btnGroup = document.createElement("div");
+            btnGroup.style.display = "flex";
+            btnGroup.style.flexDirection = "column";
+            btnGroup.style.alignItems = "center";
+
+            let btn3Wrapper = document.createElement("div");
+            btn3Wrapper.style.width = "72px"; btn3Wrapper.style.height = "72px";
+            btn3Wrapper.style.display = "flex"; btn3Wrapper.style.justifyContent = "center"; btn3Wrapper.style.alignItems = "center";
+            let btn3 = document.createElement("button");
+            btn3.innerText = "3"; btn3.classList.add("game-button", "button-3");
+            addImmediateInputEvent(btn3, "3");
+            btn3Wrapper.appendChild(btn3);
+            btnGroup.appendChild(btn3Wrapper);
+
+            // 가운데: 1,2
+            let rowNumbers = document.createElement("div");
+            rowNumbers.style.display = "flex"; rowNumbers.style.gap = "20px";
+
+            const mkBtn = (label, cls) => {
+                let wrap = document.createElement("div");
+                wrap.style.width = "72px"; wrap.style.height = "72px";
+                wrap.style.display = "flex"; wrap.style.justifyContent = "center"; wrap.style.alignItems = "center";
+                const b = document.createElement("button");
+                b.innerText = label; b.classList.add("game-button", cls);
+                addImmediateInputEvent(b, label);
+                wrap.appendChild(b);
+                return wrap;
+            };
+            rowNumbers.appendChild(mkBtn("1", "button-1"));
+            rowNumbers.appendChild(mkBtn("2", "button-2"));
+            btnGroup.appendChild(rowNumbers);
+
+            // 아래: 0
+            let rowBottom = document.createElement("div");
+            rowBottom.style.display = "flex"; rowBottom.style.alignItems = "center";
+            rowBottom.style.justifyContent = "space-between"; rowBottom.style.width = "300px";
+
+            rowBottom.appendChild(btnGroup);
+
+            let spacer = document.createElement("div");
+            spacer.style.width = "300px";
+            rowBottom.appendChild(spacer);
+
+            let btn0Wrapper = document.createElement("div");
+            btn0Wrapper.style.width = "72px"; btn0Wrapper.style.height = "72px";
+            btn0Wrapper.style.display = "flex"; btn0Wrapper.style.justifyContent = "center"; btn0Wrapper.style.alignItems = "center";
+            btn0Wrapper.style.marginBottom = "-75px";
+            let btn0 = document.createElement("button");
+            btn0.innerText = "0"; btn0.classList.add("game-button", "button-0");
+            addImmediateInputEvent(btn0, "0");
+            btn0Wrapper.appendChild(btn0);
+            rowBottom.appendChild(btn0Wrapper);
+
+            container.appendChild(rowBottom);
+        }
+
+        function renderHUD() {
+            const out = document.getElementById("output");
+            out.innerHTML = formatPatternWindow(currentAnswer, inputSequence.length) +
+                `<br>현재 점수: ${score} (시퀀스 길이: ${getPatternLength()})`;
+        }
+
+        function handleInput(input) {
+            if (!gameActive) return;
+
+            const now = Date.now();
+            if (!lastInputTime) {
+                firstReactionTimes.push(now - patternStartTime);
+            } else {
+                reactionTimes.push(now - lastInputTime);
+            }
+            lastInputTime = now;
+
+            inputSequence += input;
+
+            // 오답 즉시 종료
+            if (!currentAnswer.startsWith(inputSequence)) {
+                endGame(true);
+                return;
+            }
+
+            // ✅ 정답 입력 성공: 입력 1회당 점수 +1
+            score++;
+
+            // 한 줄(6개) 끝날 때마다 뷰포트 한 줄 위로
+            if (inputSequence.length % ROW_SIZE === 0 && inputSequence.length < currentAnswer.length) {
+                viewportStartRow++;
+            }
+
+            // 시퀀스 전부 완료했다면 새 시퀀스 생성(점수는 계속 누적)
+            if (inputSequence.length === currentAnswer.length) {
+                document.getElementById("output").innerHTML =
+                    `✅ 시퀀스 완료! 현재 점수: ${score}`;
+                setTimeout(() => { generatePattern(); renderHUD(); }, 150);
+                return;
+            }
+
+            renderHUD();
+        }
+
+        async function endGame(byMistake = false) {
+            if (!gameActive) return;
+            gameActive = false;
+
+            clearTimeout(timer);
+            resetTimerBar();
+
+            try { if (byMistake) new Audio("game-over.mp3").play().catch(()=>{}); } catch(e){}
+
+            backgroundMusic.pause();
+            backgroundMusic.currentTime = 0;
+
+            const avgFirstReaction = firstReactionTimes.length > 0
+                ? Math.floor(firstReactionTimes.reduce((a, b) => a + b, 0) / firstReactionTimes.length)
+                : 0;
+            const avgReaction = reactionTimes.length > 0
+                ? Math.floor(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
+                : 0;
+
+            document.getElementById("start-buttons").style.display = "block";
+            document.getElementById("output").innerHTML = `
+                게임 리포트 (1분)<br><br>
+                <strong>최종 점수(정답 입력 수):</strong> ${score}<br>
+                <strong>종료 사유:</strong> ${byMistake ? "오답" : "시간 종료"}<br>
+                <strong>첫 반응속도 평균:</strong> ${avgFirstReaction} ms<br>
+                <strong>입력 간 평균 속도:</strong> ${avgReaction} ms
+            `;
+
+            // ✅ 저장(새 컬렉션, 지표 = score)
+            if (nickname) {
+                const userRef = doc(db, RESULTS_COLL, nickname);
+                const userSnap = await getDoc(userRef);
+
+                const gameRecord = {
+                    nickname,
+                    score,                                  // ✅ 정답 입력 수
+                    play_time: new Date().toISOString(),
+                    first_reaction_avg: avgFirstReaction,
+                    reaction_avg: avgReaction,
+                    mode: "1min_hits_5row",
+                    end_reason: byMistake ? "mistake" : "timeup"
+                };
+
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
+                    const updatedPlayCount = (userData.play_count || 0) + 1;
+
+                    if (score > (userData.score || 0)) {
+                        await setDoc(userRef, { ...userData, score, play_count: updatedPlayCount });
+                    } else {
+                        await setDoc(userRef, { ...userData, play_count: updatedPlayCount });
+                    }
+                } else {
+                    await setDoc(userRef, { nickname, score, play_count: 1 });
+                }
+
+                const historyRef = collection(db, HISTORY_COLL);
+                await setDoc(doc(historyRef, `${nickname}_${Date.now()}`), gameRecord);
+            }
+
+            await loadUserInfo();
+            await loadPlayCount();
+            await loadRanking();
+        }
+
+        // 초기 로딩
+        loadRanking();
+        loadUserInfo();
+        loadPlayCount();
+    </script>
 
     <footer style="position: fixed; bottom: 10px; width: 100%; text-align: center; font-size: 14px; color: black;">
         만든이 : 갱생짐인

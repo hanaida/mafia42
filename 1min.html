@@ -474,7 +474,7 @@
             if (inputSequence.length === currentAnswer.length) {
                 completedPatterns += 1; // 길이 증가 규칙에 사용
                 document.getElementById("output").innerHTML =
-                    `✅ 패턴 완료! 점수: ${score} / 완료한 패턴: ${completedPatterns} (다음 패턴 길이: ${getPatternLength()})`;
+                    `점수: ${score}`;
                 setTimeout(() => { generatePattern(); renderHUD(); }, 150);
                 return;
             }
@@ -505,11 +505,8 @@
             document.getElementById("start-buttons").style.display = "block";
             document.getElementById("output").innerHTML = `
                 게임 리포트 (1분)<br><br>
-                <strong>최종 점수(정확 입력 수):</strong> ${score}<br>
-                <strong>완료한 패턴:</strong> ${completedPatterns}<br>
-                <strong>종료 사유:</strong> ${byMistake ? "오답" : "시간 종료"}<br>
-                <strong>첫 반응속도 평균:</strong> ${avgFirstReaction} ms<br>
-                <strong>입력 간 평균 속도:</strong> ${avgReaction} ms
+                <strong>점수:</strong> ${score}<br>
+                <strong>평균 속도:</strong> ${avgReaction} ms
             `;
 
             // ✅ 저장(새 컬렉션, score 기준)

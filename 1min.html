@@ -166,6 +166,9 @@
         let patternStartTime;
         let lastInputTime;
 
+        // 생존 시간
+        let gameStartTime = 0;
+
         // 뷰포트(보이는 첫 줄 인덱스)
         let viewportStartRow = 0;
 
@@ -212,7 +215,6 @@
         let rankingCache = "랭킹 불러오는 중...";
         async function loadRanking() {
             const rankingRef = collection(db, RESULTS_COLL);
-            // ✅ score(정확 입력 수) 기준 내림차순
             const scoreQuery = query(rankingRef, orderBy("score", "desc"), limit(5));
             const scoreSnapshot = await getDocs(scoreQuery);
 
@@ -243,7 +245,7 @@
             let userRank = "데이터 없음";
 
             if (userSnap.exists()) {
-                userBest = userSnap.data().score || 0;   // ✅ 최고 점수(정확 입력 수)
+                userBest = userSnap.data().score || 0;
             }
             const rankingRef = collection(db, RESULTS_COLL);
             const rankingQuery = query(rankingRef, orderBy("score", "desc"));
@@ -291,13 +293,14 @@
 
             // 상태 초기화
             gameActive = true;
-            score = 0;                // ✅ 점수 초기화
-            completedPatterns = 0;    // 완료한 패턴 수 초기화(길이 증가용)
+            score = 0;
+            completedPatterns = 0;
             reactionTimes = [];
             firstReactionTimes = [];
             inputSequence = "";
             currentAnswer = "";
-            viewportStartRow = 0;     // 뷰포트 초기화
+            viewportStartRow = 0;
+            gameStartTime = Date.now(); // ★ 생존 시간 시작
 
             document.getElementById("start-buttons").style.display = "none";
             resetTimerBar();
@@ -361,11 +364,12 @@
             ).join("");
 
             inputSequence = "";
-            viewportStartRow = 0; // 새 패턴 시작 시 첫 5줄부터
+            viewportStartRow = 0;
 
+            // ★ 위치 교체: 점수 먼저, 패턴 아래
             document.getElementById("output").innerHTML =
-                formatPatternWindow(currentAnswer, 0) +
-                `<br>점수: ${score}`;
+                `점수: ${score}<br>` +
+                formatPatternWindow(currentAnswer, 0);
         }
 
         function addImmediateInputEvent(button, value) {
@@ -436,9 +440,10 @@
 
         function renderHUD() {
             const out = document.getElementById("output");
+            // ★ 위치 교체: 점수 → 패턴
             out.innerHTML =
-                formatPatternWindow(currentAnswer, inputSequence.length) +
-                `<br>점수: ${score}`;
+                `점수: ${score}<br>` +
+                formatPatternWindow(currentAnswer, inputSequence.length);
         }
 
         function handleInput(input) {
@@ -452,7 +457,6 @@
             }
             lastInputTime = now;
 
-            // 입력 추가
             const nextInputSequence = inputSequence + input;
 
             // 오답 즉시 종료
@@ -461,7 +465,7 @@
                 return;
             }
 
-            // ✅ 정답 입력 1회 인정 → 점수 +1
+            // ✅ 정답 입력 1회 → 점수 +1
             inputSequence = nextInputSequence;
             score += 1;
 
@@ -470,16 +474,15 @@
                 viewportStartRow++;
             }
 
-            // 패턴 전체 완료 시(길이 증가 판단용 카운터만 +1), 새 패턴 생성
+            // 패턴 전체 완료 시 새 패턴 생성
             if (inputSequence.length === currentAnswer.length) {
-                completedPatterns += 1; // 길이 증가 규칙에 사용
-                document.getElementById("output").innerHTML =
-                    `점수: ${score}`;
+                completedPatterns += 1;
+                // 점수만 잠깐 표시(위치 교체 반영)
+                document.getElementById("output").innerHTML = `점수: ${score}`;
                 setTimeout(() => { generatePattern(); renderHUD(); }, 150);
                 return;
             }
 
-            // 진행 상황 렌더링
             renderHUD();
         }
 
@@ -502,11 +505,16 @@
                 ? Math.floor(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
                 : 0;
 
+            // ★ 생존 시간 계산(최대 60초)
+            const survivedMs = Math.min(Date.now() - gameStartTime, GAME_DURATION_MS);
+            const survivedSec = Math.round(survivedMs / 1000);
+
             document.getElementById("start-buttons").style.display = "block";
             document.getElementById("output").innerHTML = `
                 게임 리포트<br><br>
                 <strong>점수:</strong> ${score}<br>
-                <strong>평균 속도:</strong> ${avgReaction} ms
+                <strong>평균 속도:</strong> ${avgReaction} ms<br>
+                <strong>생존 시간:</strong> ${survivedSec}초
             `;
 
             // ✅ 저장(새 컬렉션, score 기준)
@@ -516,21 +524,21 @@
 
                 const gameRecord = {
                     nickname,
-                    score,                             // ✅ 랭킹 지표: 정확 입력 수
+                    score,
                     completed_patterns: completedPatterns,
                     play_time: new Date().toISOString(),
                     first_reaction_avg: avgFirstReaction,
                     reaction_avg: avgReaction,
                     last_pattern_length: getPatternLength(),
                     mode: "1min_tapscore_scrolling5rows",
-                    end_reason: byMistake ? "mistake" : "timeup"
+                    end_reason: byMistake ? "mistake" : "timeup",
+                    survived_seconds: survivedSec // ★ 기록에 생존 시간 포함(선택)
                 };
 
                 if (userSnap.exists()) {
                     const userData = userSnap.data();
                     const updatedPlayCount = (userData.play_count || 0) + 1;
 
-                    // 최고기록 갱신이면 score 업데이트
                     if (score > (userData.score || 0)) {
                         await setDoc(userRef, { ...userData, score, completed_patterns: Math.max(completedPatterns, userData.completed_patterns || 0), play_count: updatedPlayCount });
                     } else {

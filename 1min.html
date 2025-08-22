@@ -34,7 +34,13 @@
             font-size: 24px;
             font-weight: bold;
             margin-bottom: 20px;
+            margin-top: -40px; /* 요청하신 대로 점수 블록 자체를 조금 위로 */
         }
+        /* 점수와 패턴 사이 간격을 여기서 제어 */
+        #score-display {
+            margin-bottom: 20px; /* ← 원하시는 만큼 조절(예: 12~32px) */
+        }
+
         .game-button {
             width: 60px;
             height: 60px;
@@ -91,7 +97,6 @@
             display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 0px;
         }
         #play-count { margin-bottom: 0px; }
-        #output { margin-top: -40px; }
     </style>
 </head>
 <body>
@@ -141,7 +146,7 @@
         // ======== 게임 상태 ========
         const GAME_DURATION_MS = 60_000; // 60초
         const BASE_LEN = 2000;           // 시작 패턴 길이(사실상 매우 김)
-        const INCREASE_EVERY = 5;        // 완료한 패턴 5개마다
+        the const INCREASE_EVERY = 5;        // 완료한 패턴 5개마다
         const INCREASE_STEP = 2;         // +2 증가
 
         // 줄 단위 뷰포트(항상 5줄)
@@ -366,10 +371,10 @@
             inputSequence = "";
             viewportStartRow = 0;
 
-            // ★ 위치 교체: 점수 먼저, 패턴 아래
+            // 점수와 패턴을 분리된 블록으로 렌더링
             document.getElementById("output").innerHTML =
-                `점수: ${score}<br><br><br>` +
-                formatPatternWindow(currentAnswer, 0);
+                `<div id="score-display">점수: ${score}</div>` +
+                `<div id="pattern-window">${formatPatternWindow(currentAnswer, 0)}</div>`;
         }
 
         function addImmediateInputEvent(button, value) {
@@ -440,10 +445,9 @@
 
         function renderHUD() {
             const out = document.getElementById("output");
-            // ★ 위치 교체: 점수 → 패턴
             out.innerHTML =
-                `점수: ${score}<br>` +
-                formatPatternWindow(currentAnswer, inputSequence.length);
+                `<div id="score-display">점수: ${score}</div>` +
+                `<div id="pattern-window">${formatPatternWindow(currentAnswer, inputSequence.length)}</div>`;
         }
 
         function handleInput(input) {
@@ -477,8 +481,9 @@
             // 패턴 전체 완료 시 새 패턴 생성
             if (inputSequence.length === currentAnswer.length) {
                 completedPatterns += 1;
-                // 점수만 잠깐 표시(위치 교체 반영)
-                document.getElementById("output").innerHTML = `점수: ${score}`;
+                // 점수만 잠깐 표시 (다음 generatePattern에서 패턴창 재구성)
+                document.getElementById("output").innerHTML =
+                    `<div id="score-display">점수: ${score}</div>`;
                 setTimeout(() => { generatePattern(); renderHUD(); }, 150);
                 return;
             }
@@ -532,7 +537,7 @@
                     last_pattern_length: getPatternLength(),
                     mode: "1min_tapscore_scrolling5rows",
                     end_reason: byMistake ? "mistake" : "timeup",
-                    survived_seconds: survivedSec // ★ 기록에 생존 시간 포함(선택)
+                    survived_seconds: survivedSec
                 };
 
                 if (userSnap.exists()) {

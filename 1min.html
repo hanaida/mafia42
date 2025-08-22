@@ -1,10 +1,14 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>떡치기-돼지 (1분)</title>
     <style>
+        :root {
+            /* 한 줄(원 34px + 아래 마진 12px) = 46px */
+            --row-shift: 46px;
+        }
         body {
             font-family: Arial, sans-serif;
             text-align: center;
@@ -14,106 +18,90 @@
             height: 100vh;
         }
         #timer-bar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 20px;
-            background-color: red;
-            transition: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 20px;
+            background-color: red; transition: none;
         }
         #game-container {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: center;
-            padding-top: 50px;
+            flex-grow: 1; display: flex; flex-direction: column;
+            justify-content: flex-start; align-items: center; padding-top: 50px;
         }
-        #output {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 20px;
-        }
+        #output { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+
         .game-button {
-            width: 60px;
-            height: 60px;
-            font-size: 24px;
-            padding: 10px;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transform: scale(1.2);
-            margin: 5px;
+            width: 60px; height: 60px; font-size: 24px; padding: 10px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center; transform: scale(1.2); margin: 5px;
         }
-        .button-1 {
-            background-image: url('yellow.png'); background-size: cover; background-position: center;
-            border: none; outline: none; box-shadow: none; color: transparent; filter: brightness(1.1);
-        }
-        .button-2 {
-            background-image: url('orange.png'); background-size: cover; background-position: center;
-            border: none; outline: none; box-shadow: none; color: transparent; filter: brightness(1.2);
-        }
-        .button-3 {
-            background-image: url('red.png'); background-size: cover; background-position: center;
-            border: none; outline: none; box-shadow: none; color: transparent; filter: brightness(1.2);
-        }
-        .button-0 {
-            background-image: url('purple.png'); background-size: cover; background-position: center;
-            border: none; outline: none; box-shadow: none; color: transparent; position: relative; left: -15px;
-            filter: brightness(1.2);
-        }
+        .button-1 { background-image: url('yellow.png'); background-size: cover; background-position: center; border: none; outline: none; box-shadow: none; color: transparent; filter: brightness(1.1); }
+        .button-2 { background-image: url('orange.png'); background-size: cover; background-position: center; border: none; outline: none; box-shadow: none; color: transparent; filter: brightness(1.2); }
+        .button-3 { background-image: url('red.png');    background-size: cover; background-position: center; border: none; outline: none; box-shadow: none; color: transparent; filter: brightness(1.2); }
+        .button-0 { background-image: url('purple.png'); background-size: cover; background-position: center; border: none; outline: none; box-shadow: none; color: transparent; position: relative; left: -15px; filter: brightness(1.2); }
 
         .pattern {
             position: relative; display: inline-block; width: 26px; text-align: center;
             margin-right: 4px; margin-bottom: 12px; font-size: 0;
         }
         .pattern::after {
-            content: ""; position: absolute; bottom: 0px; left: 50%; transform: translateX(-50%);
+            content: ""; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
             width: 34px; height: 34px; border-radius: 50%;
         }
         .pattern[data-value="1"]::after { background-image: url("yellow.png"); background-size: cover; filter: brightness(1.1); }
         .pattern[data-value="2"]::after { background-image: url("orange.png"); background-size: cover; filter: brightness(1.2); }
-        .pattern[data-value="3"]::after { background-image: url("red.png"); background-size: cover; filter: brightness(1.2); }
+        .pattern[data-value="3"]::after { background-image: url("red.png");    background-size: cover; filter: brightness(1.2); }
         .pattern[data-value="0"]::after { background-image: url("purple.png"); background-size: cover; filter: brightness(1.2); }
 
         .correct::after {
             filter: brightness(200%); opacity: 0.6; border: 2px solid #00aa00;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+            box-shadow: 0 0 10px rgba(0,255,0,.8);
         }
 
-        #button-container {
-            position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
+        #button-container { position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%); }
+
+        #start-buttons { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 0; }
+        #play-count { margin-bottom: 0; }
+        #output { margin-top: 0; }
+
+        /* ===== 패턴 뷰포트 & 애니메이션 ===== */
+        #pattern-viewport {
+            width: 100%;
+            max-width: 620px;       /* 보기 좋게 폭 제한 */
+            margin: 0 auto 8px auto;
+            overflow: hidden;       /* 스크롤 애니메이션 영역 클리핑 */
+            height: calc(var(--row-shift) * 5); /* 5줄 고정 */
+            position: relative;
+        }
+        #pattern-rows {
+            will-change: transform;
+        }
+        /* 스크롤 애니메이션: 한 줄 위로 */
+        .scroll-anim {
+            transform: translateY(calc(-1 * var(--row-shift)));
+            transition: transform 180ms ease-out;
         }
 
-        #start-buttons {
-            display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 0px;
-        }
-        #play-count { margin-bottom: 0px; }
-        #output { margin-top: 0px; }
+        /* HUD 라인(점수 표시) */
+        #hud-line { font-size: 18px; font-weight: 600; margin-top: 6px; }
     </style>
 </head>
 <body>
     <div id="timer-bar"></div>
-    <h1>떡치기-돼지 (1분 · 오답=게임오버 · 5줄 뷰 · 누를 때마다 +1점)</h1>
+    <h1>떡치기-돼지 (1분 · 오답=게임오버 · 5줄 뷰)</h1>
 
     <div id="start-buttons">
         <p id="user-info">사용자 정보를 불러오는 중...</p>
-        <div style="display: flex; justify-content: center; gap: 10px;">
+        <div style="display:flex; justify-content:center; gap:10px;">
             <button id="start-button">게임 시작</button>
             <button id="nickname-button">닉네임 변경</button>
             <button id="pig-button">토끼</button>
         </div>
         <p id="play-count">플레이 기록 불러오는 중...</p>
         <p style="font-size:14px; color:#444; margin-top:8px;">
-            60초 동안 가능한 한 많은 입력을 맞추세요! <b>(오답 시 즉시 게임오버)</b><br>
-            화면에는 항상 <b>5줄(줄당 6개)</b>만 표시되며, <b>6개 입력</b> 때마다 한 줄씩 위로 스크롤됩니다.
+            60초 동안 가능한 한 많은 <b>정확한 입력</b>을 하세요! <b>(오답 시 즉시 게임오버)</b><br>
+            패턴 길이는 <b>완료한 패턴 5개</b>마다 +2씩 증가합니다. (점수는 <b>입력 1회당 +1</b>)
         </p>
     </div>
 
     <div id="game-container">
-        <p id="output">랭킹 불러오는 중...</p>
+        <div id="output">랭킹 불러오는 중...</div>
         <div id="button-container" class="game-buttons"></div>
     </div>
 
@@ -134,54 +122,54 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // ==== 새 컬렉션(기존과 분리) ====
-        const RESULTS_COLL = "game_results_hits";   // 정답 입력 수 기반 랭킹
-        const HISTORY_COLL = "game_history_hits";
+        /* ================= 새 컬렉션(기존과 분리) ================= */
+        const RESULTS_COLL = "game_results_tapscore";  // 점수(정확 입력 수) 랭킹
+        const HISTORY_COLL = "game_history_tapscore";
 
-        // ==== 게임 상태 ====
+        /* ================= 게임/뷰포트 설정 ================= */
         const GAME_DURATION_MS = 60_000; // 60초
-        const BASE_LEN = 1000;           // 시작 시퀀스 길이(크게 설정)
-        const INCREASE_EVERY = 5;        // 패턴(시퀀스) 완료마다 길이 증가 조건(남겨둠)
-        const INCREASE_STEP = 2;
+        const BASE_LEN = 1000;           // 시작 패턴 길이
+        const INCREASE_EVERY = 5;        // 완료한 패턴 5개마다
+        const INCREASE_STEP = 2;         // +2 증가
 
-        // 뷰포트: 항상 5줄
-        const ROW_SIZE = 6;
-        const VISIBLE_ROWS = 5;
+        const ROW_SIZE = 6;              // 1줄 = 6개
+        const VISIBLE_ROWS = 5;          // 항상 5줄만 보여줌
+        const SCROLL_MS = 180;           // 애니메이션 시간(ms)
 
+        /* ================= 상태 ================= */
+        let uiState = "menu";            // "menu" | "playing" | "report"
         let gameActive = false;
         let timer;
         let nickname = localStorage.getItem("nickname");
 
+        // 진행상태
         let currentAnswer = "";
         let inputSequence = "";
 
-        // ✅ 점수 = 누를 때마다 +1(정답일 때만)
-        let score = 0;
+        // 점수/통계
+        let score = 0;                 // ✅ 정확 입력 수(=랭킹 지표)
+        let completedPatterns = 0;     // 길이 증가 규칙용
 
-        // 반응속도(옵션)
-        let reactionTimes = [];
-        let firstReactionTimes = [];
+        let reactionTimes = [];        // 입력 간 간격(ms)
+        let firstReactionTimes = [];   // 각 패턴 첫 반응(ms)
         let patternStartTime;
         let lastInputTime;
 
-        // 뷰포트 시작 줄
-        let viewportStartRow = 0;
+        // 뷰포트
+        let viewportStartRow = 0;      // 현재 보이는 첫 줄 인덱스
 
-        // ==== 닉네임 ====
+        /* ================= 닉네임 ================= */
         function promptNickname() {
             if (!nickname) {
                 nickname = prompt("닉네임을 입력하세요(맢닉 권장):");
-                if (!nickname) {
-                    alert("닉네임을 입력해야 합니다.");
-                    return false;
-                }
+                if (!nickname) { alert("닉네임을 입력해야 합니다."); return false; }
                 localStorage.setItem("nickname", nickname);
             }
             return true;
         }
 
-        document.getElementById("nickname-button").addEventListener("click", function () {
-            let nn = prompt("닉네임을 입력하세요(맢닉 권장):");
+        document.getElementById("nickname-button").addEventListener("click", () => {
+            const nn = prompt("닉네임을 입력하세요(맢닉 권장):");
             if (nn) {
                 nickname = nn;
                 localStorage.setItem("nickname", nickname);
@@ -190,48 +178,48 @@
             }
         });
 
-        document.addEventListener("DOMContentLoaded", function () {
+        document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("start-button").addEventListener("click", startGame);
-            document.getElementById("pig-button").addEventListener("click", function () {
+            document.getElementById("pig-button").addEventListener("click", () => {
                 window.location.href = "https://hanaida.github.io/rabbit/";
             });
         });
 
-        // ==== 랭킹/정보(정답 입력 수 기반) ====
+        /* ================= 랭킹/정보 ================= */
         async function loadPlayCount() {
             const resultsRef = collection(db, RESULTS_COLL);
             const resultsSnapshot = await getDocs(resultsRef);
             let totalCount = 0;
-            resultsSnapshot.forEach((d) => { totalCount += d.data().play_count || 0; });
-            document.getElementById("play-count").innerHTML =
-                `지금까지 <span style="color: red;">총 ${totalCount}회</span> 플레이되었습니다.`;
+            resultsSnapshot.forEach(d => totalCount += d.data().play_count || 0);
+            document.getElementById("play-count").innerHTML = `지금까지 <span style="color:red;">총 ${totalCount}회</span> 플레이되었습니다.`;
         }
 
         let rankingCache = "랭킹 불러오는 중...";
         async function loadRanking() {
             const rankingRef = collection(db, RESULTS_COLL);
-            const scoreQuery = query(rankingRef, orderBy("score", "desc"), limit(5)); // ✅ score 기준
+            const scoreQuery = query(rankingRef, orderBy("score", "desc"), limit(5));
             const scoreSnapshot = await getDocs(scoreQuery);
 
             const scoreRanking = scoreSnapshot.empty
                 ? "아직 랭킹 정보가 없습니다."
-                : `<span style="color: red; font-weight: bold; font-size: 35px;">돼지의 전당</span><br><br>
-                   <span style="font-size: 20px; font-weight: bold;">🏁 정답 입력 수(1분)</span><br><br>` +
-                  Array.from(scoreSnapshot.docs, (doc, index) =>
-                      `${index + 1}위: ${doc.data().nickname} - ${doc.data().score} 점`
+                : `<span style="color:red; font-weight:bold; font-size:35px;">돼지의 전당</span><br><br>
+                   <span style="font-size:20px; font-weight:bold;">🏁 점수(정확 입력 수) 부문 (1분)</span><br><br>` +
+                  Array.from(scoreSnapshot.docs, (doc, i) =>
+                      `${i + 1}위: ${doc.data().nickname} - ${doc.data().score} 점`
                   ).join("<br>");
 
             rankingCache = scoreRanking + '<br><br><br><br>';
-            if (!gameActive) {
-                document.getElementById("output").innerHTML = rankingCache;
+
+            // ❗리포트 화면을 덮어쓰지 않도록: 메뉴 상태에서만 출력
+            if (uiState === "menu") {
+                const out = document.getElementById("output");
+                out.innerHTML = rankingCache;
             }
         }
 
         async function loadUserInfo() {
-            if (!nickname) {
-                document.getElementById("user-info").innerText = "닉네임을 설정해주세요.";
-                return;
-            }
+            if (!nickname) { document.getElementById("user-info").innerText = "닉네임을 설정해주세요."; return; }
+
             const userRef = doc(db, RESULTS_COLL, nickname);
             const userSnap = await getDoc(userRef);
 
@@ -239,9 +227,8 @@
             let totalPlayers = 0;
             let userRank = "데이터 없음";
 
-            if (userSnap.exists()) {
-                userBest = userSnap.data().score || 0;   // ✅ 최고 점수(정답 입력 수)
-            }
+            if (userSnap.exists()) userBest = userSnap.data().score || 0;
+
             const rankingRef = collection(db, RESULTS_COLL);
             const rankingQuery = query(rankingRef, orderBy("score", "desc"));
             const rankingSnapshot = await getDocs(rankingQuery);
@@ -253,14 +240,13 @@
                 rank++;
             }
 
-            document.getElementById("user-info").innerHTML = `
-                <strong>닉네임:</strong> ${nickname} <br>
-                <strong>최고 점수(1분):</strong> ${userBest} <br>
-                <strong>랭킹:</strong> 전체 ${totalPlayers}명 중 <span style="color: blue;">${userRank}등</span>
-            `;
+            document.getElementById("user-info").innerHTML =
+                `<strong>닉네임:</strong> ${nickname} <br>
+                 <strong>최고 점수(1분):</strong> ${userBest} <br>
+                 <strong>랭킹:</strong> 전체 ${totalPlayers}명 중 <span style="color:blue;">${userRank}등</span>`;
         }
 
-        // ==== 사운드(선택) ====
+        /* ================= 사운드(선택) ================= */
         const soundEffects = {
             "1": new Audio("sound1.mp3"),
             "2": new Audio("sound2.mp3"),
@@ -269,75 +255,25 @@
         };
         Object.values(soundEffects).forEach(a => a.load());
         function playSound(key) {
-            if (soundEffects[key]) {
-                let snd = soundEffects[key].cloneNode();
-                snd.play().catch(() => {});
-            }
+            const s = soundEffects[key];
+            if (s) s.cloneNode().play().catch(()=>{});
         }
-
-        let backgroundMusic = new Audio("game-music.mp3");
+        const backgroundMusic = new Audio("game-music.mp3");
         backgroundMusic.loop = true;
 
-        // ==== 게임 로직 ====
-        function startGame() {
-            if (!promptNickname()) return;
-            if (gameActive) {
-                alert("이미 게임이 진행 중입니다.");
-                return;
+        /* ================= 공통 렌더링 유틸 ================= */
+        function ensureViewportStructure() {
+            const out = document.getElementById("output");
+            if (!document.getElementById("pattern-viewport")) {
+                out.innerHTML =
+                    `<div id="pattern-viewport"><div id="pattern-rows"></div></div>
+                     <div id="hud-line"></div>`;
             }
-
-            // 상태 초기화
-            gameActive = true;
-            score = 0; // ✅ 점수 초기화
-            reactionTimes = [];
-            firstReactionTimes = [];
-            inputSequence = "";
-            currentAnswer = "";
-            viewportStartRow = 0;
-
-            document.getElementById("start-buttons").style.display = "none";
-            resetTimerBar();
-            startGlobalTimer(GAME_DURATION_MS);
-
-            backgroundMusic.play().catch(() => {});
-            generatePattern();  // 첫 시퀀스
-            renderButtons();
-            renderHUD();
         }
 
-        function startGlobalTimer(durationMs) {
-            clearTimeout(timer);
-            const timerBar = document.getElementById("timer-bar");
-            timerBar.style.transition = "none";
-            timerBar.style.width = "100%";
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    timerBar.style.transition = `width ${durationMs}ms linear`;
-                    timerBar.style.width = "0%";
-                });
-            });
-            timer = setTimeout(() => endGame(false), durationMs); // 시간 만료
-        }
-
-        function resetTimerBar() {
-            const timerBar = document.getElementById("timer-bar");
-            timerBar.style.transition = "none";
-            timerBar.style.width = "100%";
-        }
-
-        // 시퀀스 길이(완료할 때마다 증가하도록 로직 유지, 실제 점수와는 무관)
-        function getPatternLength() {
-            // 완료 시퀀스 수를 따로 세지 않으므로 길이 고정/점진 중 선택 가능
-            // 필요 시 아래를 항상 BASE_LEN로 유지해도 됨.
-            return BASE_LEN;
-            // 혹은 다음과 같이 시퀀스 완료 수를 저장해서 증가시키려면 별도 카운트를 두면 됨.
-        }
-
-        // 5줄 창만 렌더링
         function formatPatternWindow(answer, typedLen) {
             const startIdx = viewportStartRow * ROW_SIZE;
             const endIdx = Math.min(answer.length, startIdx + VISIBLE_ROWS * ROW_SIZE);
-
             let html = "";
             for (let i = startIdx; i < endIdx; i++) {
                 const ch = answer[i];
@@ -349,22 +285,79 @@
             return html;
         }
 
+        function renderHUD() {
+            ensureViewportStructure();
+            const rowsEl = document.getElementById("pattern-rows");
+            const hudEl  = document.getElementById("hud-line");
+
+            rowsEl.innerHTML = formatPatternWindow(currentAnswer, inputSequence.length);
+
+            const avgReaction = reactionTimes.length
+                ? Math.floor(reactionTimes.reduce((a,b)=>a+b,0) / reactionTimes.length)
+                : 0;
+            hudEl.textContent = `점수: ${score} · 평균 입력 속도: ${avgReaction} ms`;
+        }
+
+        /* ================= 게임 로직 ================= */
+        function startGame() {
+            if (!promptNickname()) return;
+            if (gameActive) { alert("이미 게임이 진행 중입니다."); return; }
+
+            uiState = "playing";
+            gameActive = true;
+
+            score = 0;
+            completedPatterns = 0;
+            reactionTimes = [];
+            firstReactionTimes = [];
+            inputSequence = "";
+            currentAnswer = "";
+            viewportStartRow = 0;
+
+            document.getElementById("start-buttons").style.display = "none";
+            resetTimerBar();
+            startGlobalTimer(GAME_DURATION_MS);
+
+            backgroundMusic.play().catch(()=>{});
+            generatePattern();
+            renderButtons();
+            renderHUD();
+        }
+
+        function startGlobalTimer(ms) {
+            clearTimeout(timer);
+            const bar = document.getElementById("timer-bar");
+            bar.style.transition = "none"; bar.style.width = "100%";
+            requestAnimationFrame(()=>requestAnimationFrame(()=>{
+                bar.style.transition = `width ${ms}ms linear`;
+                bar.style.width = "0%";
+            }));
+            timer = setTimeout(()=>endGame(false), ms);
+        }
+
+        function resetTimerBar() {
+            const bar = document.getElementById("timer-bar");
+            bar.style.transition = "none"; bar.style.width = "100%";
+        }
+
+        function getPatternLength() {
+            return BASE_LEN + Math.floor(completedPatterns / INCREASE_EVERY) * INCREASE_STEP;
+        }
+
         function generatePattern() {
             patternStartTime = Date.now();
             lastInputTime = null;
 
             const len = getPatternLength();
             const colors = ["1", "2", "3"];
-            currentAnswer = Array.from({ length: len }, (_, i) =>
-                (i % 2 === 0 ? colors[Math.floor(Math.random() * colors.length)] : "0")
+            currentAnswer = Array.from({length: len}, (_,i)=>
+                (i % 2 === 0 ? colors[Math.floor(Math.random()*colors.length)] : "0")
             ).join("");
 
             inputSequence = "";
             viewportStartRow = 0;
 
-            document.getElementById("output").innerHTML =
-                formatPatternWindow(currentAnswer, 0) +
-                `<br>현재 점수: ${score} (시퀀스 길이: ${len})`;
+            renderHUD();
         }
 
         function addImmediateInputEvent(button, value) {
@@ -377,66 +370,58 @@
             container.innerHTML = "";
 
             // 위: 3
-            let btnGroup = document.createElement("div");
-            btnGroup.style.display = "flex";
-            btnGroup.style.flexDirection = "column";
-            btnGroup.style.alignItems = "center";
+            const group = document.createElement("div");
+            group.style.display = "flex"; group.style.flexDirection = "column"; group.style.alignItems = "center";
 
-            let btn3Wrapper = document.createElement("div");
-            btn3Wrapper.style.width = "72px"; btn3Wrapper.style.height = "72px";
-            btn3Wrapper.style.display = "flex"; btn3Wrapper.style.justifyContent = "center"; btn3Wrapper.style.alignItems = "center";
-            let btn3 = document.createElement("button");
-            btn3.innerText = "3"; btn3.classList.add("game-button", "button-3");
-            addImmediateInputEvent(btn3, "3");
-            btn3Wrapper.appendChild(btn3);
-            btnGroup.appendChild(btn3Wrapper);
+            const makeWrap = () => {
+                const w = document.createElement("div");
+                w.style.width="72px"; w.style.height="72px";
+                w.style.display="flex"; w.style.justifyContent="center"; w.style.alignItems="center";
+                return w;
+            };
+
+            const w3 = makeWrap();
+            const b3 = document.createElement("button");
+            b3.innerText="3"; b3.classList.add("game-button","button-3");
+            addImmediateInputEvent(b3,"3");
+            w3.appendChild(b3); group.appendChild(w3);
 
             // 가운데: 1,2
-            let rowNumbers = document.createElement("div");
-            rowNumbers.style.display = "flex"; rowNumbers.style.gap = "20px";
+            const rowMid = document.createElement("div");
+            rowMid.style.display="flex"; rowMid.style.gap="20px";
 
             const mkBtn = (label, cls) => {
-                let wrap = document.createElement("div");
-                wrap.style.width = "72px"; wrap.style.height = "72px";
-                wrap.style.display = "flex"; wrap.style.justifyContent = "center"; wrap.style.alignItems = "center";
+                const wrap = makeWrap();
                 const b = document.createElement("button");
                 b.innerText = label; b.classList.add("game-button", cls);
                 addImmediateInputEvent(b, label);
                 wrap.appendChild(b);
                 return wrap;
             };
-            rowNumbers.appendChild(mkBtn("1", "button-1"));
-            rowNumbers.appendChild(mkBtn("2", "button-2"));
-            btnGroup.appendChild(rowNumbers);
+            rowMid.appendChild(mkBtn("1","button-1"));
+            rowMid.appendChild(mkBtn("2","button-2"));
+            group.appendChild(rowMid);
 
-            // 아래: 0
-            let rowBottom = document.createElement("div");
-            rowBottom.style.display = "flex"; rowBottom.style.alignItems = "center";
-            rowBottom.style.justifyContent = "space-between"; rowBottom.style.width = "300px";
+            // 아래: 0 (오른쪽)
+            const bottom = document.createElement("div");
+            bottom.style.display="flex"; bottom.style.alignItems="center";
+            bottom.style.justifyContent="space-between"; bottom.style.width="300px";
 
-            rowBottom.appendChild(btnGroup);
+            bottom.appendChild(group);
 
-            let spacer = document.createElement("div");
-            spacer.style.width = "300px";
-            rowBottom.appendChild(spacer);
+            const spacer = document.createElement("div");
+            spacer.style.width="300px";
+            bottom.appendChild(spacer);
 
-            let btn0Wrapper = document.createElement("div");
-            btn0Wrapper.style.width = "72px"; btn0Wrapper.style.height = "72px";
-            btn0Wrapper.style.display = "flex"; btn0Wrapper.style.justifyContent = "center"; btn0Wrapper.style.alignItems = "center";
-            btn0Wrapper.style.marginBottom = "-75px";
-            let btn0 = document.createElement("button");
-            btn0.innerText = "0"; btn0.classList.add("game-button", "button-0");
-            addImmediateInputEvent(btn0, "0");
-            btn0Wrapper.appendChild(btn0);
-            rowBottom.appendChild(btn0Wrapper);
+            const w0 = makeWrap();
+            w0.style.marginBottom="-75px";
+            const b0 = document.createElement("button");
+            b0.innerText="0"; b0.classList.add("game-button","button-0");
+            addImmediateInputEvent(b0,"0");
+            w0.appendChild(b0);
+            bottom.appendChild(w0);
 
-            container.appendChild(rowBottom);
-        }
-
-        function renderHUD() {
-            const out = document.getElementById("output");
-            out.innerHTML = formatPatternWindow(currentAnswer, inputSequence.length) +
-                `<br>현재 점수: ${score} (시퀀스 길이: ${getPatternLength()})`;
+            container.appendChild(bottom);
         }
 
         function handleInput(input) {
@@ -450,36 +435,48 @@
             }
             lastInputTime = now;
 
-            inputSequence += input;
+            const nextSeq = inputSequence + input;
 
             // 오답 즉시 종료
-            if (!currentAnswer.startsWith(inputSequence)) {
-                endGame(true);
-                return;
-            }
+            if (!currentAnswer.startsWith(nextSeq)) { endGame(true); return; }
 
-            // ✅ 정답 입력 성공: 입력 1회당 점수 +1
-            score++;
+            // 정답 1회 입력 → 점수 +1
+            inputSequence = nextSeq;
+            score += 1;
 
-            // 한 줄(6개) 끝날 때마다 뷰포트 한 줄 위로
+            // 한 줄(6개) 완료 시: 스크롤 애니메이션 → 완료 후 실제로 한 줄 올림
             if (inputSequence.length % ROW_SIZE === 0 && inputSequence.length < currentAnswer.length) {
-                viewportStartRow++;
+                ensureViewportStructure();
+                const rowsEl = document.getElementById("pattern-rows");
+                // 일단 현재 상태 렌더
+                rowsEl.innerHTML = formatPatternWindow(currentAnswer, inputSequence.length);
+                // 애니메이션 클래스 부여
+                rowsEl.classList.remove("scroll-anim"); // 재사용 대비 리셋
+                void rowsEl.offsetWidth;               // reflow 강제(클래스 재적용 트릭)
+                rowsEl.classList.add("scroll-anim");
+
+                // 애니메이션이 끝난 뒤 실제 뷰포트 이동 + 재렌더
+                setTimeout(() => {
+                    viewportStartRow++;
+                    rowsEl.classList.remove("scroll-anim");
+                    renderHUD();
+                }, SCROLL_MS);
+            } else {
+                renderHUD();
             }
 
-            // 시퀀스 전부 완료했다면 새 시퀀스 생성(점수는 계속 누적)
+            // 패턴 전체 완료 → 길이 증가 카운터만 +1 후 새 패턴
             if (inputSequence.length === currentAnswer.length) {
-                document.getElementById("output").innerHTML =
-                    `✅ 시퀀스 완료! 현재 점수: ${score}`;
-                setTimeout(() => { generatePattern(); renderHUD(); }, 150);
-                return;
+                completedPatterns += 1;
+                setTimeout(() => { generatePattern(); }, 120);
             }
-
-            renderHUD();
         }
 
         async function endGame(byMistake = false) {
             if (!gameActive) return;
+
             gameActive = false;
+            uiState = "report";                 // ❗리포트 모드로 전환(랭킹이 덮어쓰지 않도록)
 
             clearTimeout(timer);
             resetTimerBar();
@@ -489,60 +486,69 @@
             backgroundMusic.pause();
             backgroundMusic.currentTime = 0;
 
-            const avgFirstReaction = firstReactionTimes.length > 0
-                ? Math.floor(firstReactionTimes.reduce((a, b) => a + b, 0) / firstReactionTimes.length)
-                : 0;
-            const avgReaction = reactionTimes.length > 0
-                ? Math.floor(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
+            const avgReaction = reactionTimes.length
+                ? Math.floor(reactionTimes.reduce((a,b)=>a+b,0) / reactionTimes.length)
                 : 0;
 
+            // 스타트 버튼 영역은 다시 보이되, output은 리포트 고정
             document.getElementById("start-buttons").style.display = "block";
-            document.getElementById("output").innerHTML = `
-                게임 리포트 (1분)<br><br>
-                <strong>최종 점수(정답 입력 수):</strong> ${score}<br>
-                <strong>종료 사유:</strong> ${byMistake ? "오답" : "시간 종료"}<br>
-                <strong>첫 반응속도 평균:</strong> ${avgFirstReaction} ms<br>
-                <strong>입력 간 평균 속도:</strong> ${avgReaction} ms
-            `;
 
-            // ✅ 저장(새 컬렉션, 지표 = score)
+            const out = document.getElementById("output");
+            out.innerHTML =
+                `<div style="margin:8px 0 4px 0; font-size:22px; font-weight:700;">게임 리포트 (1분)</div>
+                 <div style="font-size:18px; line-height:1.7;">
+                    <strong>점수:</strong> ${score}<br>
+                    <strong>평균 입력 속도:</strong> ${avgReaction} ms
+                 </div>`;
+
+            // ===== 저장(점수 기준, 리포트는 유지 / 랭킹은 캐시만 갱신) =====
             if (nickname) {
                 const userRef = doc(db, RESULTS_COLL, nickname);
                 const userSnap = await getDoc(userRef);
 
                 const gameRecord = {
                     nickname,
-                    score,                                  // ✅ 정답 입력 수
+                    score,                             // ✅ 랭킹 지표
+                    completed_patterns: completedPatterns,
                     play_time: new Date().toISOString(),
-                    first_reaction_avg: avgFirstReaction,
                     reaction_avg: avgReaction,
-                    mode: "1min_hits_5row",
+                    last_pattern_length: getPatternLength(),
+                    mode: "1min_tapscore_scrolling5rows",
                     end_reason: byMistake ? "mistake" : "timeup"
                 };
 
                 if (userSnap.exists()) {
                     const userData = userSnap.data();
                     const updatedPlayCount = (userData.play_count || 0) + 1;
-
                     if (score > (userData.score || 0)) {
-                        await setDoc(userRef, { ...userData, score, play_count: updatedPlayCount });
+                        await setDoc(userRef, { ...userData, score, completed_patterns: Math.max(completedPatterns, userData.completed_patterns || 0), play_count: updatedPlayCount });
                     } else {
-                        await setDoc(userRef, { ...userData, play_count: updatedPlayCount });
+                        await setDoc(userRef, { ...userData, play_count: updatedPlayCount, completed_patterns: Math.max(completedPatterns, userData.completed_patterns || 0) });
                     }
                 } else {
-                    await setDoc(userRef, { nickname, score, play_count: 1 });
+                    await setDoc(userRef, { nickname, score, completed_patterns: completedPatterns, play_count: 1 });
                 }
 
                 const historyRef = collection(db, HISTORY_COLL);
                 await setDoc(doc(historyRef, `${nickname}_${Date.now()}`), gameRecord);
             }
 
+            // 사용자 정보/플레이 카운트는 갱신하되,
+            // 랭킹은 화면에 즉시 반영하지 않고 캐시만 업데이트(화면 덮어쓰기 방지).
             await loadUserInfo();
             await loadPlayCount();
-            await loadRanking();
+            loadRanking(); // uiState가 "report"라서 화면 미출력, 캐시만 갱신
         }
 
-        // 초기 로딩
+        /* ================= 초기 로딩 ================= */
+        function showMenu() {
+            uiState = "menu";
+            const out = document.getElementById("output");
+            out.innerHTML = rankingCache;
+        }
+
+        // 처음엔 메뉴 상태로 랭킹 렌더
+        showMenu();
         loadRanking();
         loadUserInfo();
         loadPlayCount();

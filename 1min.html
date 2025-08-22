@@ -136,9 +136,13 @@
 
         // ======== 게임 상태 ========
         const GAME_DURATION_MS = 60_000; // 60초
-        const BASE_LEN = 1000;              // 시작 패턴 길이
+        const BASE_LEN = 1000;              // 시작 패턴 길이(사실상 무한)
         const INCREASE_EVERY = 5;        // 5개 맞출 때마다
         const INCREASE_STEP = 2;         // +2 증가
+
+        // 새로 추가된 상수 (줄 단위 뷰포트)
+        const ROW_SIZE = 6;              // 한 줄에 6개
+        const VISIBLE_ROWS = 5;          // 화면에는 항상 5줄만 표시
 
         let gameActive = false;
         let timer; // 전체 게임 종료 타이머
@@ -154,6 +158,9 @@
         let firstReactionTimes = [];
         let patternStartTime;
         let lastInputTime;
+
+        // 뷰포트(보이는 첫 줄 인덱스)
+        let viewportStartRow = 0;
 
         // ======== 닉네임 ========
         function promptNickname() {
@@ -198,7 +205,6 @@
         let rankingCache = "랭킹 불러오는 중...";
         async function loadRanking() {
             const rankingRef = collection(db, "game_results");
-            // round 필드를 ‘소화한 패턴 수’로 사용
             const scoreQuery = query(rankingRef, orderBy("round", "desc"), limit(5));
             const scoreSnapshot = await getDocs(scoreQuery);
 
@@ -282,6 +288,7 @@
             firstReactionTimes = [];
             inputSequence = "";
             currentAnswer = "";
+            viewportStartRow = 0; // 뷰포트 초기화
 
             document.getElementById("start-buttons").style.display = "none";
             resetTimerBar();
@@ -318,11 +325,20 @@
             return BASE_LEN + Math.floor(patternsCleared / INCREASE_EVERY) * INCREASE_STEP;
         }
 
-        function formatPattern(pattern) {
-            return pattern
-                .split('')
-                .map((num, idx) => `<span class="pattern" data-value="${num}">${num}</span>${((idx+1)%6===0)?"<br>":" "}`)
-                .join("");
+        // ----- 보이는 구간만 렌더링 (항상 5줄)
+        function formatPatternWindow(answer, typedLen) {
+            const startIdx = viewportStartRow * ROW_SIZE;
+            const endIdx = Math.min(answer.length, startIdx + VISIBLE_ROWS * ROW_SIZE);
+
+            let html = "";
+            for (let i = startIdx; i < endIdx; i++) {
+                const ch = answer[i];
+                const wasTyped = i < typedLen; // 이미 입력 완료된 위치는 하이라이트
+                html += `<span class="pattern${wasTyped ? " correct" : ""}" data-value="${ch}">${ch}</span>`;
+                if ((i - startIdx + 1) % ROW_SIZE === 0) html += "<br>";
+                else html += " ";
+            }
+            return html;
         }
 
         function generatePattern() {
@@ -336,8 +352,11 @@
             ).join("");
 
             inputSequence = "";
+            viewportStartRow = 0; // 새 패턴 시작 시 첫 5줄부터
+
             document.getElementById("output").innerHTML =
-                formatPattern(currentAnswer) + `<br>현재 점수: ${patternsCleared} (길이: ${len})`;
+                formatPatternWindow(currentAnswer, 0) +
+                `<br>현재 점수: ${patternsCleared} (길이: ${len})`;
         }
 
         function addImmediateInputEvent(button, value) {
@@ -408,7 +427,7 @@
 
         function renderHUD() {
             const out = document.getElementById("output");
-            out.innerHTML = formatPattern(currentAnswer) +
+            out.innerHTML = formatPatternWindow(currentAnswer, inputSequence.length) +
                 `<br>현재 점수: ${patternsCleared} (길이: ${getPatternLength()})`;
         }
 
@@ -423,25 +442,31 @@
             }
             lastInputTime = now;
 
+            // 입력 추가
             inputSequence += input;
 
-            // 시각 피드백
-            let patternElements = document.querySelectorAll(".pattern");
-            if (inputSequence.length <= patternElements.length) {
-                let targetElement = patternElements[inputSequence.length - 1];
-                targetElement.classList.add("correct");
+            // 즉시 오답 체크
+            if (!currentAnswer.startsWith(inputSequence)) {
+                endGame(true);
+                return;
             }
 
-            if (inputSequence === currentAnswer) {
-                // 성공: 패턴 수 +1 → 길이 규칙에 의해 다음 패턴 길이 자동 증가 가능
+            // 줄(6개) 단위로 모두 맞췄다면 뷰포트 한 칸 스크롤
+            if (inputSequence.length % ROW_SIZE === 0 && inputSequence.length < currentAnswer.length) {
+                viewportStartRow++; // 맨 위 줄 제거, 아래 4줄 위로, 새 줄 추가
+            }
+
+            // 패턴 전체 정답
+            if (inputSequence.length === currentAnswer.length) {
                 patternsCleared++;
                 document.getElementById("output").innerHTML =
                     `✅ 통과! 현재 점수: ${patternsCleared} (다음 길이: ${getPatternLength()})`;
                 setTimeout(() => { generatePattern(); renderHUD(); }, 200);
-            } else if (!currentAnswer.startsWith(inputSequence)) {
-                // 오답: 즉시 게임오버
-                endGame(true);
+                return;
             }
+
+            // 진행 상황 렌더링 (이미 입력한 칸은 correct 유지)
+            renderHUD();
         }
 
         async function endGame(byMistake = false) {

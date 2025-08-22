@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>떡치기-돼지 (1분 스프린트)</title>
+    <title>떡치기-돼지 (1분 · 오답=게임오버 · 패턴무한증가)</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -48,66 +48,30 @@
             margin: 5px;
         }
         .button-1 {
-            background-image: url('yellow.png');
-            background-size: cover;
-            background-position: center;
-            border: none;
-            outline: none;
-            box-shadow: none;
-            color: transparent;
-            filter: brightness(1.1);
+            background-image: url('yellow.png'); background-size: cover; background-position: center;
+            border: none; outline: none; box-shadow: none; color: transparent; filter: brightness(1.1);
         }
         .button-2 {
-            background-image: url('orange.png');
-            background-size: cover;
-            background-position: center;
-            border: none;
-            outline: none;
-            box-shadow: none;
-            color: transparent;
-            filter: brightness(1.2);
+            background-image: url('orange.png'); background-size: cover; background-position: center;
+            border: none; outline: none; box-shadow: none; color: transparent; filter: brightness(1.2);
         }
         .button-3 {
-            background-image: url('red.png');
-            background-size: cover;
-            background-position: center;
-            border: none;
-            outline: none;
-            box-shadow: none;
-            color: transparent;
-            filter: brightness(1.2);
+            background-image: url('red.png'); background-size: cover; background-position: center;
+            border: none; outline: none; box-shadow: none; color: transparent; filter: brightness(1.2);
         }
         .button-0 {
-            background-image: url('purple.png');
-            background-size: cover;
-            background-position: center;
-            border: none;
-            outline: none;
-            box-shadow: none;
-            color: transparent;
-            position: relative;
-            left: -15px;
+            background-image: url('purple.png'); background-size: cover; background-position: center;
+            border: none; outline: none; box-shadow: none; color: transparent; position: relative; left: -15px;
             filter: brightness(1.2);
         }
 
         .pattern {
-            position: relative;
-            display: inline-block;
-            width: 26px;
-            text-align: center;
-            margin-right: 4px;
-            margin-bottom: 12px;
-            font-size: 0;
+            position: relative; display: inline-block; width: 26px; text-align: center;
+            margin-right: 4px; margin-bottom: 12px; font-size: 0;
         }
         .pattern::after {
-            content: "";
-            position: absolute;
-            bottom: 0px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
+            content: ""; position: absolute; bottom: 0px; left: 50%; transform: translateX(-50%);
+            width: 34px; height: 34px; border-radius: 50%;
         }
         .pattern[data-value="1"]::after { background-image: url("yellow.png"); background-size: cover; filter: brightness(1.1); }
         .pattern[data-value="2"]::after { background-image: url("orange.png"); background-size: cover; filter: brightness(1.2); }
@@ -115,26 +79,16 @@
         .pattern[data-value="0"]::after { background-image: url("purple.png"); background-size: cover; filter: brightness(1.2); }
 
         .correct::after {
-            filter: brightness(200%);
-            opacity: 0.6;
-            border: 2px solid #00aa00;
+            filter: brightness(200%); opacity: 0.6; border: 2px solid #00aa00;
             box-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
         }
 
-        .correct { color: lightgray; }
         #button-container {
-            position: fixed;
-            bottom: 70px;
-            left: 50%;
-            transform: translateX(-50%);
+            position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
         }
 
         #start-buttons {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            margin-top: 0px;
+            display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 0px;
         }
         #play-count { margin-bottom: 0px; }
         #output { margin-top: 0px; }
@@ -142,7 +96,7 @@
 </head>
 <body>
     <div id="timer-bar"></div>
-    <h1>떡치기-돼지 (1분 스프린트)</h1>
+    <h1>떡치기-돼지 (1분 · 오답=게임오버 · 패턴무한증가)</h1>
 
     <div id="start-buttons">
         <p id="user-info">사용자 정보를 불러오는 중...</p>
@@ -152,7 +106,10 @@
             <button id="pig-button">토끼</button>
         </div>
         <p id="play-count">플레이 기록 불러오는 중...</p>
-        <p style="font-size:14px; color:#444; margin-top:8px;">60초 동안 가능한 한 많은 패턴을 맞추세요! (틀려도 게임은 계속 진행됩니다)</p>
+        <p style="font-size:14px; color:#444; margin-top:8px;">
+            60초 동안 가능한 한 많은 패턴을 맞추세요! <b>(오답 시 즉시 게임오버)</b><br>
+            패턴 길이는 <b>5개 맞출 때마다 +2</b>씩 계속 증가합니다.
+        </p>
     </div>
 
     <div id="game-container">
@@ -179,19 +136,20 @@
 
         // ======== 게임 상태 ========
         const GAME_DURATION_MS = 60_000; // 60초
-        const FIXED_PATTERN_LEN = 6;     // 패턴 길이 고정 (라운드 증가 없음)
+        const BASE_LEN = 6;              // 시작 패턴 길이
+        const INCREASE_EVERY = 5;        // 5개 맞출 때마다
+        const INCREASE_STEP = 2;         // +2 증가
+
         let gameActive = false;
-        let timer;                // 전체 게임 종료 타이머
+        let timer; // 전체 게임 종료 타이머
         let nickname = localStorage.getItem("nickname");
 
         let currentAnswer = "";
         let inputSequence = "";
 
-        let patternsCleared = 0;  // 맞춘 패턴 수
-        let attempts = 0;         // 시도(성공+실패) 수
-        let mistakes = 0;         // 틀린 패턴 수
+        let patternsCleared = 0;  // 맞춘 패턴 수(= 점수)
 
-        // 반응속도(선택): 첫 입력 반응/입력 간 평균 반응
+        // 반응속도(옵션)
         let reactionTimes = [];
         let firstReactionTimes = [];
         let patternStartTime;
@@ -231,10 +189,8 @@
         async function loadPlayCount() {
             const resultsRef = collection(db, "game_results");
             const resultsSnapshot = await getDocs(resultsRef);
-
             let totalCount = 0;
             resultsSnapshot.forEach((d) => { totalCount += d.data().play_count || 0; });
-
             document.getElementById("play-count").innerHTML =
                 `지금까지 <span style="color: red;">총 ${totalCount}회</span> 플레이되었습니다.`;
         }
@@ -242,8 +198,7 @@
         let rankingCache = "랭킹 불러오는 중...";
         async function loadRanking() {
             const rankingRef = collection(db, "game_results");
-
-            // ‘round’ 필드 = 소화한 패턴 수 로 간주
+            // round 필드를 ‘소화한 패턴 수’로 사용
             const scoreQuery = query(rankingRef, orderBy("round", "desc"), limit(5));
             const scoreSnapshot = await getDocs(scoreQuery);
 
@@ -294,7 +249,7 @@
             `;
         }
 
-        // ======== 사운드 ========
+        // ======== 사운드(선택) ========
         const soundEffects = {
             "1": new Audio("sound1.mp3"),
             "2": new Audio("sound2.mp3"),
@@ -302,7 +257,6 @@
             "0": new Audio("sound0.mp3")
         };
         Object.values(soundEffects).forEach(a => a.load());
-
         function playSound(key) {
             if (soundEffects[key]) {
                 let snd = soundEffects[key].cloneNode();
@@ -324,8 +278,6 @@
             // 상태 초기화
             gameActive = true;
             patternsCleared = 0;
-            attempts = 0;
-            mistakes = 0;
             reactionTimes = [];
             firstReactionTimes = [];
             inputSequence = "";
@@ -336,9 +288,7 @@
             startGlobalTimer(GAME_DURATION_MS);
 
             backgroundMusic.play().catch(() => {});
-
-            // 첫 패턴 생성
-            generatePattern();
+            generatePattern();  // 첫 패턴
             renderButtons();
             renderHUD();
         }
@@ -354,7 +304,7 @@
                     timerBar.style.width = "0%";
                 });
             });
-            timer = setTimeout(endGame, durationMs);
+            timer = setTimeout(() => endGame(false), durationMs); // 시간 만료
         }
 
         function resetTimerBar() {
@@ -363,14 +313,16 @@
             timerBar.style.width = "100%";
         }
 
-        // 패턴 길이는 고정(무한 스트림)
-        function getPatternLength() { return FIXED_PATTERN_LEN; }
+        // ★ 패턴 길이: 6 + floor(소화 개수/5) * 2 → 무한 증가
+        function getPatternLength() {
+            return BASE_LEN + Math.floor(patternsCleared / INCREASE_EVERY) * INCREASE_STEP;
+        }
 
         function formatPattern(pattern) {
             return pattern
                 .split('')
-                .map((num) => `<span class="pattern" data-value="${num}">${num}</span>`)
-                .reduce((acc, curr, index) => acc + curr + ((index + 1) % 6 === 0 ? "<br>" : " "), "");
+                .map((num, idx) => `<span class="pattern" data-value="${num}">${num}</span>${((idx+1)%6===0)?"<br>":" "}`)
+                .join("");
         }
 
         function generatePattern() {
@@ -378,14 +330,14 @@
             lastInputTime = null;
 
             const len = getPatternLength();
-            // 기존 로직 유지: 짝수 인덱스는 색(1/2/3) 중 하나, 홀수는 0
             const colors = ["1", "2", "3"];
             currentAnswer = Array.from({ length: len }, (_, i) =>
                 (i % 2 === 0 ? colors[Math.floor(Math.random() * colors.length)] : "0")
             ).join("");
 
             inputSequence = "";
-            document.getElementById("output").innerHTML = formatPattern(currentAnswer) + `<br>현재 점수: ${patternsCleared}`;
+            document.getElementById("output").innerHTML =
+                formatPattern(currentAnswer) + `<br>현재 점수: ${patternsCleared} (길이: ${len})`;
         }
 
         function addImmediateInputEvent(button, value) {
@@ -397,56 +349,43 @@
             const container = document.getElementById("button-container");
             container.innerHTML = "";
 
-            // 3 버튼 (위)
+            // 위: 3
             let btnGroup = document.createElement("div");
             btnGroup.style.display = "flex";
             btnGroup.style.flexDirection = "column";
             btnGroup.style.alignItems = "center";
 
             let btn3Wrapper = document.createElement("div");
-            btn3Wrapper.style.width = "72px";
-            btn3Wrapper.style.height = "72px";
-            btn3Wrapper.style.display = "flex";
-            btn3Wrapper.style.justifyContent = "center";
-            btn3Wrapper.style.alignItems = "center";
-
+            btn3Wrapper.style.width = "72px"; btn3Wrapper.style.height = "72px";
+            btn3Wrapper.style.display = "flex"; btn3Wrapper.style.justifyContent = "center"; btn3Wrapper.style.alignItems = "center";
             let btn3 = document.createElement("button");
-            btn3.innerText = "3";
-            btn3.classList.add("game-button", "button-3");
+            btn3.innerText = "3"; btn3.classList.add("game-button", "button-3");
             addImmediateInputEvent(btn3, "3");
             btn3Wrapper.appendChild(btn3);
             btnGroup.appendChild(btn3Wrapper);
 
-            // 1,2 (가운데)
+            // 가운데: 1,2
             let rowNumbers = document.createElement("div");
-            rowNumbers.style.display = "flex";
-            rowNumbers.style.gap = "20px";
+            rowNumbers.style.display = "flex"; rowNumbers.style.gap = "20px";
 
-            let mkBtn = (label, cls) => {
+            const mkBtn = (label, cls) => {
                 let wrap = document.createElement("div");
-                wrap.style.width = "72px";
-                wrap.style.height = "72px";
-                wrap.style.display = "flex";
-                wrap.style.justifyContent = "center";
-                wrap.style.alignItems = "center";
+                wrap.style.width = "72px"; wrap.style.height = "72px";
+                wrap.style.display = "flex"; wrap.style.justifyContent = "center"; wrap.style.alignItems = "center";
                 const b = document.createElement("button");
-                b.innerText = label;
-                b.classList.add("game-button", cls);
+                b.innerText = label; b.classList.add("game-button", cls);
                 addImmediateInputEvent(b, label);
                 wrap.appendChild(b);
                 return wrap;
             };
-
             rowNumbers.appendChild(mkBtn("1", "button-1"));
             rowNumbers.appendChild(mkBtn("2", "button-2"));
             btnGroup.appendChild(rowNumbers);
 
-            // 0 (아래)
+            // 아래: 0
             let rowBottom = document.createElement("div");
-            rowBottom.style.display = "flex";
-            rowBottom.style.alignItems = "center";
-            rowBottom.style.justifyContent = "space-between";
-            rowBottom.style.width = "300px";
+            rowBottom.style.display = "flex"; rowBottom.style.alignItems = "center";
+            rowBottom.style.justifyContent = "space-between"; rowBottom.style.width = "300px";
 
             rowBottom.appendChild(btnGroup);
 
@@ -455,16 +394,11 @@
             rowBottom.appendChild(spacer);
 
             let btn0Wrapper = document.createElement("div");
-            btn0Wrapper.style.width = "72px";
-            btn0Wrapper.style.height = "72px";
-            btn0Wrapper.style.display = "flex";
-            btn0Wrapper.style.justifyContent = "center";
-            btn0Wrapper.style.alignItems = "center";
+            btn0Wrapper.style.width = "72px"; btn0Wrapper.style.height = "72px";
+            btn0Wrapper.style.display = "flex"; btn0Wrapper.style.justifyContent = "center"; btn0Wrapper.style.alignItems = "center";
             btn0Wrapper.style.marginBottom = "-75px";
-
             let btn0 = document.createElement("button");
-            btn0.innerText = "0";
-            btn0.classList.add("game-button", "button-0");
+            btn0.innerText = "0"; btn0.classList.add("game-button", "button-0");
             addImmediateInputEvent(btn0, "0");
             btn0Wrapper.appendChild(btn0);
             rowBottom.appendChild(btn0Wrapper);
@@ -473,10 +407,9 @@
         }
 
         function renderHUD() {
-            // 현재 점수 등 추가 정보 표시 (output에 함께 표기)
             const out = document.getElementById("output");
             out.innerHTML = formatPattern(currentAnswer) +
-                `<br>현재 점수: ${patternsCleared} | 실패: ${mistakes} | 시도: ${attempts}`;
+                `<br>현재 점수: ${patternsCleared} (길이: ${getPatternLength()})`;
         }
 
         function handleInput(input) {
@@ -492,41 +425,37 @@
 
             inputSequence += input;
 
-            // 시각적 피드백
+            // 시각 피드백
             let patternElements = document.querySelectorAll(".pattern");
             if (inputSequence.length <= patternElements.length) {
                 let targetElement = patternElements[inputSequence.length - 1];
                 targetElement.classList.add("correct");
             }
 
-            // 정답/오답 판정
             if (inputSequence === currentAnswer) {
-                // 성공: 점수 +1, 다음 패턴 즉시
+                // 성공: 패턴 수 +1 → 길이 규칙에 의해 다음 패턴 길이 자동 증가 가능
                 patternsCleared++;
-                attempts++;
                 document.getElementById("output").innerHTML =
-                    `✅ 통과! 현재 점수: ${patternsCleared}`;
-                setTimeout(() => { generatePattern(); renderHUD(); }, 250);
+                    `✅ 통과! 현재 점수: ${patternsCleared} (다음 길이: ${getPatternLength()})`;
+                setTimeout(() => { generatePattern(); renderHUD(); }, 200);
             } else if (!currentAnswer.startsWith(inputSequence)) {
-                // 오답: 해당 패턴 실패 처리, 다음 패턴
-                mistakes++;
-                attempts++;
-                document.getElementById("output").innerHTML = `❌ 실패! 현재 점수: ${patternsCleared}`;
-                setTimeout(() => { generatePattern(); renderHUD(); }, 250);
+                // 오답: 즉시 게임오버
+                endGame(true);
             }
         }
 
-        async function endGame() {
+        async function endGame(byMistake = false) {
             if (!gameActive) return;
             gameActive = false;
 
             clearTimeout(timer);
             resetTimerBar();
 
+            try { if (byMistake) new Audio("game-over.mp3").play().catch(()=>{}); } catch(e){}
+
             backgroundMusic.pause();
             backgroundMusic.currentTime = 0;
 
-            // 리포트
             const avgFirstReaction = firstReactionTimes.length > 0
                 ? Math.floor(firstReactionTimes.reduce((a, b) => a + b, 0) / firstReactionTimes.length)
                 : 0;
@@ -536,42 +465,43 @@
 
             document.getElementById("start-buttons").style.display = "block";
             document.getElementById("output").innerHTML = `
-                게임 리포트 (1분 스프린트)<br><br>
+                게임 리포트 (1분)<br><br>
                 <strong>소화 패턴 수:</strong> ${patternsCleared}<br>
-                <strong>실패:</strong> ${mistakes} / <strong>시도:</strong> ${attempts}<br>
+                <strong>종료 사유:</strong> ${byMistake ? "오답" : "시간 종료"}<br>
                 <strong>첫 반응속도 평균:</strong> ${avgFirstReaction} ms<br>
                 <strong>입력 간 평균 속도:</strong> ${avgReaction} ms
             `;
 
             // 저장(스키마 호환: round = 소화 패턴 수)
-            const userRef = doc(db, "game_results", nickname);
-            const userSnap = await getDoc(userRef);
+            if (nickname) {
+                const userRef = doc(db, "game_results", nickname);
+                const userSnap = await getDoc(userRef);
 
-            const gameRecord = {
-                nickname,
-                round: patternsCleared,
-                play_time: new Date().toISOString(),
-                first_reaction_avg: avgFirstReaction,
-                reaction_avg: avgReaction,
-                attempts,
-                mistakes,
-                mode: "1min_sprint"
-            };
+                const gameRecord = {
+                    nickname,
+                    round: patternsCleared,
+                    play_time: new Date().toISOString(),
+                    first_reaction_avg: avgFirstReaction,
+                    reaction_avg: avgReaction,
+                    mode: "1min_sprint_grow_pattern",
+                    end_reason: byMistake ? "mistake" : "timeup"
+                };
 
-            if (userSnap.exists()) {
-                const userData = userSnap.data();
-                const updatedPlayCount = (userData.play_count || 0) + 1;
-                if (patternsCleared > (userData.round || 0)) {
-                    await setDoc(userRef, { ...userData, round: patternsCleared, play_count: updatedPlayCount });
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
+                    const updatedPlayCount = (userData.play_count || 0) + 1;
+                    if (patternsCleared > (userData.round || 0)) {
+                        await setDoc(userRef, { ...userData, round: patternsCleared, play_count: updatedPlayCount });
+                    } else {
+                        await setDoc(userRef, { ...userData, play_count: updatedPlayCount });
+                    }
                 } else {
-                    await setDoc(userRef, { ...userData, play_count: updatedPlayCount });
+                    await setDoc(userRef, { nickname, round: patternsCleared, play_count: 1 });
                 }
-            } else {
-                await setDoc(userRef, { nickname, round: patternsCleared, play_count: 1 });
-            }
 
-            const historyRef = collection(db, "game_history");
-            await setDoc(doc(historyRef, `${nickname}_${Date.now()}`), gameRecord);
+                const historyRef = collection(db, "game_history");
+                await setDoc(doc(historyRef, `${nickname}_${Date.now()}`), gameRecord);
+            }
 
             await loadUserInfo();
             await loadPlayCount();

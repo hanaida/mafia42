@@ -365,7 +365,7 @@
 
             document.getElementById("output").innerHTML =
                 formatPatternWindow(currentAnswer, 0) +
-                `<br>점수: ${score} / 완료한 패턴: ${completedPatterns} (이번 패턴 길이: ${len})`;
+                `<br>점수: ${score}`;
         }
 
         function addImmediateInputEvent(button, value) {
@@ -504,7 +504,7 @@
 
             document.getElementById("start-buttons").style.display = "block";
             document.getElementById("output").innerHTML = `
-                게임 리포트 (1분)<br><br>
+                게임 리포트<br><br>
                 <strong>점수:</strong> ${score}<br>
                 <strong>평균 속도:</strong> ${avgReaction} ms
             `;

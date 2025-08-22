@@ -219,7 +219,7 @@
             const scoreRanking = scoreSnapshot.empty
                 ? "아직 랭킹 정보가 없습니다."
                 : `<span style="color: red; font-weight: bold; font-size: 35px;">돼지의 전당</span><br><br>
-                   <span style="font-size: 20px; font-weight: bold;">🏁 점수(정확 입력 수) 부문 (1분)</span><br><br>` +
+                   <span style="font-size: 20px; font-weight: bold;">🐷 점수 부문</span><br><br>` +
                   Array.from(scoreSnapshot.docs, (doc, index) =>
                       `${index + 1}위: ${doc.data().nickname} - ${doc.data().score} 점`
                   ).join("<br>");
@@ -438,7 +438,7 @@
             const out = document.getElementById("output");
             out.innerHTML =
                 formatPatternWindow(currentAnswer, inputSequence.length) +
-                `<br>점수: ${score} / 완료한 패턴: ${completedPatterns} (이번 패턴 길이: ${getPatternLength()})`;
+                `<br>점수: ${score}`;
         }
 
         function handleInput(input) {
